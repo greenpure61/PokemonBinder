@@ -1,0 +1,53 @@
+import { getServerSession } from "next-auth/next";
+import { NextResponse } from "next/server";
+import { authOptions } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import type { CreateBinderInput } from "@/types/binder";
+
+export async function GET() {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const binders = await prisma.binder.findMany({
+    where: { userId: session.user.id },
+    include: { _count: { select: { pages: true } } },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  return NextResponse.json(binders);
+}
+
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const body: CreateBinderInput = await req.json();
+  if (!body.name?.trim()) {
+    return NextResponse.json({ error: "Name is required" }, { status: 400 });
+  }
+
+  const pageCount = body.pageCount ?? 10;
+
+  const binder = await prisma.binder.create({
+    data: {
+      userId: session.user.id,
+      name: body.name.trim(),
+      description: body.description,
+      coverColor: body.coverColor ?? "#1a1a2e",
+      pocketLayout: body.pocketLayout ?? "NINE_POCKET",
+      pageCount,
+      pages: {
+        createMany: {
+          data: Array.from({ length: pageCount }, (_, i) => ({ pageIndex: i })),
+        },
+      },
+    },
+    include: { pages: { orderBy: { pageIndex: "asc" } } },
+  });
+
+  return NextResponse.json(binder, { status: 201 });
+}

@@ -1,0 +1,75 @@
+"use client";
+
+import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
+import type { BinderWithPages } from "@/types/binder";
+
+const LAYOUT_LABELS = {
+  FOUR_POCKET: "4-pocket",
+  NINE_POCKET: "9-pocket",
+  TWELVE_POCKET: "12-pocket",
+} as const;
+
+function PocketGrid({ layout }: { layout: keyof typeof LAYOUT_LABELS }) {
+  const cols = layout === "FOUR_POCKET" ? 2 : layout === "NINE_POCKET" ? 3 : 4;
+  const rows = layout === "TWELVE_POCKET" ? 3 : cols;
+  const count = cols * rows;
+  return (
+    <div
+      className="grid gap-0.5 opacity-40"
+      style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
+    >
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="aspect-[2.5/3.5] rounded-sm bg-white/20" />
+      ))}
+    </div>
+  );
+}
+
+interface BinderCardProps {
+  binder: BinderWithPages & { _count?: { pages: number } };
+  onDelete: (id: string) => void;
+}
+
+export function BinderCard({ binder, onDelete }: BinderCardProps) {
+  const router = useRouter();
+
+  return (
+    <motion.div
+      whileHover={{ y: -4, scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-white/10 shadow-xl"
+      style={{ background: binder.coverColor }}
+      onClick={() => router.push(`/binder/${binder.id}`)}
+    >
+      <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent" />
+
+      <div className="relative p-5">
+        <div className="mb-4">
+          <PocketGrid layout={binder.pocketLayout} />
+        </div>
+
+        <div className="flex items-end justify-between">
+          <div>
+            <p className="font-semibold text-white truncate max-w-[140px]">{binder.name}</p>
+            <p className="text-xs text-white/50 mt-0.5">
+              {LAYOUT_LABELS[binder.pocketLayout]} · {binder.pageCount} pages
+            </p>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete(binder.id);
+            }}
+            className="opacity-0 group-hover:opacity-100 transition-opacity rounded-lg p-1.5 hover:bg-black/20 text-white/60 hover:text-white"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
