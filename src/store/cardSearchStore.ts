@@ -34,6 +34,8 @@ async function fetchCards(params: {
   url.searchParams.set("page", String(params.page));
   url.searchParams.set("pageSize", String(PAGE_SIZE));
   if (params.setId) url.searchParams.set("setId", params.setId);
+  // Set selected → collector number; otherwise newest set first, then by number within set
+  url.searchParams.set("orderBy", params.setId ? "number" : "-set.releaseDate,number");
   // Only apply type filter when searching Pokémon exclusively
   if (params.types.length && params.supertypes.length === 1 && params.supertypes[0] === "Pokémon")
     url.searchParams.set("types", params.types.join(","));

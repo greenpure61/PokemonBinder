@@ -7,11 +7,12 @@ export async function GET(req: Request) {
   const page = Number(searchParams.get("page") ?? 1);
   const pageSize = Number(searchParams.get("pageSize") ?? 20);
   const setId = searchParams.get("setId") ?? undefined;
+  const orderBy = searchParams.get("orderBy") ?? undefined;
   const types = searchParams.get("types")?.split(",").filter(Boolean);
   const supertypes = searchParams.get("supertypes")?.split(",").filter(Boolean);
 
   try {
-    const data = await searchCards({ query, page, pageSize, setId, types, supertypes });
+    const data = await searchCards({ query, page, pageSize, setId, orderBy, types, supertypes });
     return NextResponse.json(data);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Search failed";
