@@ -117,6 +117,18 @@ export function CardSearchPanel() {
 
   const ownedSet = useMemo(() => new Set(ownedCardIds), [ownedCardIds]);
 
+  // Set completion — count owned cards whose id belongs to the selected set
+  const setCompletion = useMemo(() => {
+    if (!selectedSetId) return null;
+    const set = sets.find((s) => s.id === selectedSetId);
+    if (!set) return null;
+    const total = set.total || set.printedTotal || 0;
+    if (!total) return null;
+    const prefix = `${selectedSetId}-`;
+    const owned = ownedCardIds.filter((id) => id.startsWith(prefix)).length;
+    return { owned: Math.min(owned, total), total, pct: Math.min(100, Math.round((owned / total) * 100)) };
+  }, [selectedSetId, sets, ownedCardIds]);
+
   useEffect(() => {
     fetchResults();
     loadSets();
@@ -250,6 +262,24 @@ export function CardSearchPanel() {
       {sets.length > 0 && (
         <div className="px-3 pb-2 flex-shrink-0">
           <SetPicker sets={sets} value={selectedSetId} onChange={handleSetChange} />
+
+          {/* Set completion tracker */}
+          {setCompletion && (
+            <div className="mt-2">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[10px] text-white/40">Collected</span>
+                <span className="text-[10px] text-white/60 tabular-nums">
+                  {setCompletion.owned}/{setCompletion.total} · {setCompletion.pct}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-green-500/70 transition-all duration-300"
+                  style={{ width: `${setCompletion.pct}%` }}
+                />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
