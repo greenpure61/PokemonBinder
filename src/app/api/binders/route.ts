@@ -23,7 +23,22 @@ export async function GET() {
     orderBy: { updatedAt: "desc" },
   });
 
-  return NextResponse.json(binders);
+  // Count filled slots per binder (one query, aggregated in memory)
+  const pageCounts = await prisma.binderPage.findMany({
+    where: { binder: { userId: session.user.id } },
+    select: {
+      binderId: true,
+      _count: { select: { slots: { where: { cardId: { not: null } } } } },
+    },
+  });
+  const cardCountByBinder = new Map<string, number>();
+  for (const p of pageCounts) {
+    cardCountByBinder.set(p.binderId, (cardCountByBinder.get(p.binderId) ?? 0) + p._count.slots);
+  }
+
+  const withCounts = binders.map((b) => ({ ...b, cardCount: cardCountByBinder.get(b.id) ?? 0 }));
+
+  return NextResponse.json(withCounts);
 }
 
 export async function POST(req: Request) {

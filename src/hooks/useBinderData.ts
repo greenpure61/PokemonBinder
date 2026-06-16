@@ -1,8 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { BinderWithPages, CreateBinderInput, UpdateBinderInput } from "@/types/binder";
 
+export type BinderListItem = BinderWithPages & { cardCount?: number; _count?: { pages: number } };
+
 export function useBinders() {
-  return useQuery<BinderWithPages[]>({
+  return useQuery<BinderListItem[]>({
     queryKey: ["binders"],
     queryFn: async () => {
       const res = await fetch("/api/binders");
@@ -53,6 +55,25 @@ export function useUpdateBinder(binderId: string) {
       return res.json();
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["binders"] });
+      qc.invalidateQueries({ queryKey: ["binder", binderId] });
+    },
+  });
+}
+
+export function useUpdateBinderById() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ binderId, data }: { binderId: string; data: UpdateBinderInput }) => {
+      const res = await fetch(`/api/binders/${binderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update binder");
+      return res.json();
+    },
+    onSuccess: (_data, { binderId }) => {
       qc.invalidateQueries({ queryKey: ["binders"] });
       qc.invalidateQueries({ queryKey: ["binder", binderId] });
     },

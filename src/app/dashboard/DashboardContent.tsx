@@ -5,9 +5,10 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
-import { useBinders, useCreateBinder, useDeleteBinder } from "@/hooks/useBinderData";
+import { useBinders, useCreateBinder, useDeleteBinder, useUpdateBinderById, type BinderListItem } from "@/hooks/useBinderData";
 import { BinderCard } from "@/components/dashboard/BinderCard";
 import { CreateBinderModal } from "@/components/dashboard/CreateBinderModal";
+import { EditBinderModal } from "@/components/dashboard/EditBinderModal";
 import type { BinderLayout } from "@/types/binder";
 
 interface Props {
@@ -25,9 +26,11 @@ const item = {
 
 export function DashboardContent({ user }: Props) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<BinderListItem | null>(null);
   const { data: binders, isLoading } = useBinders();
   const createBinder = useCreateBinder();
   const deleteBinder = useDeleteBinder();
+  const updateBinder = useUpdateBinderById();
 
   async function handleCreate(data: { name: string; pocketLayout: BinderLayout; pageCount: number; coverColor: string }) {
     await createBinder.mutateAsync(data);
@@ -37,6 +40,11 @@ export function DashboardContent({ user }: Props) {
   async function handleDelete(id: string) {
     if (!confirm("Delete this binder? This cannot be undone.")) return;
     await deleteBinder.mutateAsync(id);
+  }
+
+  async function handleEditSave(binderId: string, data: { name: string; coverColor: string }) {
+    await updateBinder.mutateAsync({ binderId, data });
+    setEditing(null);
   }
 
   return (
@@ -127,7 +135,7 @@ export function DashboardContent({ user }: Props) {
           >
             {binders?.map((binder) => (
               <motion.div key={binder.id} variants={item}>
-                <BinderCard binder={binder} onDelete={handleDelete} />
+                <BinderCard binder={binder} onDelete={handleDelete} onEdit={setEditing} />
               </motion.div>
             ))}
           </motion.div>
@@ -139,6 +147,13 @@ export function DashboardContent({ user }: Props) {
         onClose={() => setModalOpen(false)}
         onCreate={handleCreate}
         isLoading={createBinder.isPending}
+      />
+
+      <EditBinderModal
+        binder={editing}
+        onClose={() => setEditing(null)}
+        onSave={handleEditSave}
+        isLoading={updateBinder.isPending}
       />
     </div>
   );
