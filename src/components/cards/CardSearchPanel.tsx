@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useCardSearchStore } from "@/store/cardSearchStore";
 import { CardGrid } from "./CardGrid";
+import { CardZoomModal } from "./CardZoomModal";
 import type { PokeTCGSet } from "@/types/pokemontcg";
 
 
@@ -100,6 +101,8 @@ export function CardSearchPanel() {
     selectedTypes, setSelectedTypes, selectedSetId, setSelectedSetId,
     supertypes, setSupertypes, rarity, setRarity, sets, loadSets,
   } = useCardSearchStore();
+
+  const [zoom, setZoom] = useState<{ cardId: string; cardName: string; cardImageSmall: string } | null>(null);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -265,6 +268,14 @@ export function CardSearchPanel() {
         hasMore={results.length < totalCount}
         onLoadMore={loadMore}
         emptyMessage={query ? `No results for "${query}"` : "No cards found"}
+        onZoom={(cardId, cardName, cardImageSmall) => setZoom({ cardId, cardName, cardImageSmall })}
+      />
+
+      <CardZoomModal
+        cardId={zoom?.cardId ?? null}
+        cardName={zoom?.cardName ?? ""}
+        cardImageSmall={zoom?.cardImageSmall ?? ""}
+        onClose={() => setZoom(null)}
       />
     </div>
   );

@@ -10,9 +10,10 @@ interface Props {
   hasMore: boolean;
   onLoadMore: () => void;
   emptyMessage?: string;
+  onZoom?: (cardId: string, cardName: string, cardImageSmall: string) => void;
 }
 
-export function CardGrid({ cards, isLoading, hasMore, onLoadMore, emptyMessage }: Props) {
+export function CardGrid({ cards, isLoading, hasMore, onLoadMore, emptyMessage, onZoom }: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -39,7 +40,7 @@ export function CardGrid({ cards, isLoading, hasMore, onLoadMore, emptyMessage }
     <div className="overflow-y-auto flex-1 px-3 pb-3">
       <div className="grid grid-cols-3 gap-1.5">
         {cards.map((card) => (
-          <CardThumbnail key={card.id} card={card} />
+          <CardThumbnail key={card.id} card={card} onZoom={onZoom} />
         ))}
         {isLoading &&
           Array.from({ length: 6 }).map((_, i) => (

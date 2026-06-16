@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import Image from "next/image";
 import type { PokeTCGCard } from "@/types/pokemontcg";
@@ -7,9 +8,10 @@ import type { DragItem } from "@/types/dnd";
 
 interface Props {
   card: PokeTCGCard;
+  onZoom?: (cardId: string, cardName: string, cardImageSmall: string) => void;
 }
 
-export function CardThumbnail({ card }: Props) {
+export function CardThumbnail({ card, onZoom }: Props) {
   const dragData: DragItem = {
     type: "SEARCH_CARD",
     cardId: card.id,
@@ -23,11 +25,23 @@ export function CardThumbnail({ card }: Props) {
     data: dragData,
   });
 
+  // Track whether dnd-kit actually activated a drag so we can suppress the click
+  const wasDragging = useRef(false);
+  useEffect(() => {
+    if (isDragging) wasDragging.current = true;
+  }, [isDragging]);
+
+  function handleClick() {
+    if (wasDragging.current) { wasDragging.current = false; return; }
+    onZoom?.(card.id, card.name, card.images.small);
+  }
+
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
+      onClick={handleClick}
       className={`group relative aspect-[2.5/3.5] cursor-grab active:cursor-grabbing rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.08] hover:-translate-y-0.5 hover:z-10 hover:shadow-[0_8px_24px_rgba(0,0,0,0.6)] hover:ring-1 hover:ring-white/20 ${
         isDragging ? "opacity-30 scale-95" : ""
       }`}
