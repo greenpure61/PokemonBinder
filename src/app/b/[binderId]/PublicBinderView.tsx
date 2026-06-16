@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useBinderStore } from "@/store/binderStore";
-import { BinderCanvas } from "@/components/binder/BinderCanvas";
+import { BinderPageFlat } from "@/components/binder/BinderPageFlat";
+import { CardZoomModal } from "@/components/cards/CardZoomModal";
 import type { BinderWithPages } from "@/types/binder";
 
 interface Props {
@@ -16,9 +17,14 @@ export function PublicBinderView({ binder }: Props) {
   const currentSpreadIndex = useBinderStore((s) => s.currentSpreadIndex);
   const totalSpreads = Math.ceil(binder.pageCount / 2);
 
+  const [zoomCard, setZoomCard] = useState<{ cardId: string; cardName: string; cardImageSmall: string } | null>(null);
+
   useEffect(() => {
     setBinder(binder);
   }, [binder, setBinder]);
+
+  const leftPage = binder.pages[currentSpreadIndex * 2];
+  const rightPage = binder.pages[currentSpreadIndex * 2 + 1];
 
   return (
     <div className="flex flex-col h-screen bg-[#0c1020]">
@@ -39,8 +45,14 @@ export function PublicBinderView({ binder }: Props) {
         </Link>
       </header>
 
-      <div className="flex-1 min-h-0">
-        <BinderCanvas />
+      <div className="flex-1 min-h-0 p-4">
+        <BinderPageFlat
+          leftPage={leftPage}
+          rightPage={rightPage}
+          layout={binder.pocketLayout}
+          onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
+          onRemove={() => {}}
+        />
       </div>
 
       <div className="flex items-center justify-center gap-4 py-3 border-t border-white/5 flex-shrink-0">
@@ -62,6 +74,13 @@ export function PublicBinderView({ binder }: Props) {
           Next →
         </button>
       </div>
+
+      <CardZoomModal
+        cardId={zoomCard?.cardId ?? null}
+        cardName={zoomCard?.cardName ?? ""}
+        cardImageSmall={zoomCard?.cardImageSmall ?? ""}
+        onClose={() => setZoomCard(null)}
+      />
     </div>
   );
 }

@@ -6,15 +6,15 @@ import {
   DragOverlay,
   PointerSensor,
   TouchSensor,
+  pointerWithin,
   useSensor,
   useSensors,
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { AnimatePresence, motion } from "framer-motion";
+import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import Image from "next/image";
 import { useBinderStore } from "@/store/binderStore";
-import { useUIStore } from "@/store/uiStore";
 import { useBinderPersist } from "@/hooks/useBinderPersist";
 import { useBinder } from "@/hooks/useBinderData";
 import { EditorLayout } from "@/components/layout/EditorLayout";
@@ -22,7 +22,6 @@ import { TopNav } from "@/components/layout/TopNav";
 import { RightSidebar } from "@/components/layout/RightSidebar";
 import { CardSearchPanel } from "@/components/cards/CardSearchPanel";
 import { BinderPageFlat } from "@/components/binder/BinderPageFlat";
-import { BinderCanvas } from "@/components/binder/BinderCanvas";
 import { CardZoomModal } from "@/components/cards/CardZoomModal";
 import type { DragItem } from "@/types/dnd";
 
@@ -39,8 +38,6 @@ export function BinderEditor({ binderId }: Props) {
   const currentSpreadIndex = useBinderStore((s) => s.currentSpreadIndex);
   const updateSlot = useBinderStore((s) => s.updateSlot);
   const swapSlots = useBinderStore((s) => s.swapSlots);
-
-  const viewMode = useUIStore((s) => s.viewMode);
 
   const [activeDrag, setActiveDrag] = useState<DragItem | null>(null);
   const [zoomCard, setZoomCard] = useState<{ cardId: string; cardName: string; cardImageSmall: string } | null>(null);
@@ -125,47 +122,24 @@ export function BinderEditor({ binderId }: Props) {
   const rightPage = binder.pages[currentSpreadIndex * 2 + 1];
 
   return (
-    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd}>
       <EditorLayout
         topNav={<TopNav binder={binder} isDirty={isDirty} isSaving={isSaving} />}
         leftSidebar={<CardSearchPanel />}
-        rightSidebar={<RightSidebar onExport={viewMode === "flat" ? handleExport : undefined} />}
+        rightSidebar={<RightSidebar onExport={handleExport} />}
       >
-        <AnimatePresence mode="wait">
-          {viewMode === "3d" ? (
-            <motion.div
-              key="3d"
-              className="w-full h-full"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <BinderCanvas />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="flat"
-              ref={flatRef}
-              className="w-full h-full"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-            >
-              <BinderPageFlat
-                leftPage={leftPage}
-                rightPage={rightPage}
-                layout={binder.pocketLayout}
-                onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
-                onRemove={(pageId, slotIndex) => updateSlot(pageId, slotIndex, null)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+        <div ref={flatRef} className="w-full h-full">
+          <BinderPageFlat
+            leftPage={leftPage}
+            rightPage={rightPage}
+            layout={binder.pocketLayout}
+            onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
+            onRemove={(pageId, slotIndex) => updateSlot(pageId, slotIndex, null)}
+          />
+        </div>
       </EditorLayout>
 
-      <DragOverlay dropAnimation={null}>
+      <DragOverlay dropAnimation={null} modifiers={[snapCenterToCursor]}>
         {activeDrag?.cardImageSmall ? (
           <div className="relative w-20 aspect-[2.5/3.5] rotate-[-3deg] opacity-90 pointer-events-none">
             <Image

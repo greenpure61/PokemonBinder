@@ -17,8 +17,6 @@ interface Props {
 }
 
 export function TopNav({ binder, isDirty, isSaving }: Props) {
-  const viewMode = useUIStore((s) => s.viewMode);
-  const setViewMode = useUIStore((s) => s.setViewMode);
   const toggleLeft = useUIStore((s) => s.toggleLeftSidebar);
   const toggleRight = useUIStore((s) => s.toggleRightSidebar);
   const updateName = useBinderStore((s) => s.updateName);
@@ -113,27 +111,6 @@ export function TopNav({ binder, isDirty, isSaving }: Props) {
             {binder.name}
           </button>
         )}
-      </div>
-
-      {/* Center: view mode toggle */}
-      <div className="flex items-center rounded-lg border border-white/10 overflow-hidden">
-        <button
-          onClick={() => setViewMode("flat")}
-          className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-            viewMode === "flat" ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          Flat
-        </button>
-        <div className="w-px h-4 bg-white/10" />
-        <button
-          onClick={() => setViewMode("3d")}
-          className={`px-3 py-1.5 text-xs font-medium transition-colors ${
-            viewMode === "3d" ? "bg-white/10 text-white" : "text-white/40 hover:text-white hover:bg-white/5"
-          }`}
-        >
-          3D
-        </button>
       </div>
 
       {/* Right: share + save status + avatar + right panel toggle */}
