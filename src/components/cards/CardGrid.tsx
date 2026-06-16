@@ -11,9 +11,10 @@ interface Props {
   onLoadMore: () => void;
   emptyMessage?: string;
   onZoom?: (cardId: string, cardName: string, cardImageSmall: string) => void;
+  ownedCardIds?: Set<string>;
 }
 
-export function CardGrid({ cards, isLoading, hasMore, onLoadMore, emptyMessage, onZoom }: Props) {
+export function CardGrid({ cards, isLoading, hasMore, onLoadMore, emptyMessage, onZoom, ownedCardIds }: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,7 +41,7 @@ export function CardGrid({ cards, isLoading, hasMore, onLoadMore, emptyMessage, 
     <div className="overflow-y-auto flex-1 px-3 pb-3">
       <div className="grid grid-cols-3 gap-1.5">
         {cards.map((card) => (
-          <CardThumbnail key={card.id} card={card} onZoom={onZoom} />
+          <CardThumbnail key={card.id} card={card} onZoom={onZoom} isOwned={ownedCardIds?.has(card.id)} />
         ))}
         {isLoading &&
           Array.from({ length: 6 }).map((_, i) => (

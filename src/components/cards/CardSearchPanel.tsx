@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useCardSearchStore } from "@/store/cardSearchStore";
 import { CardGrid } from "./CardGrid";
 import { CardZoomModal } from "./CardZoomModal";
@@ -14,6 +14,11 @@ const RARITIES = [
   "Double Rare", "Ultra Rare", "Illustration Rare",
   "Special Illustration Rare", "Hyper Rare",
   "ACE SPEC Rare", "Radiant Rare", "Promo",
+];
+const SORT_OPTIONS: { value: "newest" | "name" | "number"; label: string }[] = [
+  { value: "newest", label: "Newest" },
+  { value: "name", label: "Name" },
+  { value: "number", label: "Number" },
 ];
 
 function SetPicker({ sets, value, onChange }: { sets: PokeTCGSet[]; value: string; onChange: (id: string) => void }) {
@@ -99,7 +104,10 @@ export function CardSearchPanel() {
   const {
     query, setQuery, fetchResults, loadMore, results, isLoading, totalCount,
     selectedTypes, setSelectedTypes, selectedSetId, setSelectedSetId,
-    supertypes, setSupertypes, rarity, setRarity, sets, loadSets,
+    supertypes, setSupertypes, rarity, setRarity,
+    sortOrder, setSortOrder,
+    sets, loadSets,
+    ownedCardIds, loadOwnedCards,
   } = useCardSearchStore();
 
   const [zoom, setZoom] = useState<{ cardId: string; cardName: string; cardImageSmall: string } | null>(null);
@@ -107,9 +115,12 @@ export function CardSearchPanel() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const ownedSet = useMemo(() => new Set(ownedCardIds), [ownedCardIds]);
+
   useEffect(() => {
     fetchResults();
     loadSets();
+    loadOwnedCards();
   }, []);
 
   function trigger(delay = 400) {
@@ -143,14 +154,24 @@ export function CardSearchPanel() {
   }
 
   function handleSetChange(setId: string) {
-    // When browsing a specific set, show all card types so the full set is visible
-    if (setId) setSupertypes(ALL_SUPERTYPES);
+    // When browsing a specific set, show all card types and default to number order
+    if (setId) {
+      setSupertypes(ALL_SUPERTYPES);
+      setSortOrder("number");
+    } else {
+      setSortOrder("newest");
+    }
     setSelectedSetId(setId);
     trigger(100);
   }
 
   function handleRarityChange(r: string) {
     setRarity(r);
+    trigger(100);
+  }
+
+  function handleSortChange(s: "newest" | "name" | "number") {
+    setSortOrder(s);
     trigger(100);
   }
 
@@ -251,6 +272,26 @@ export function CardSearchPanel() {
         </div>
       </div>
 
+      {/* Sort order */}
+      <div className="px-3 pb-2 flex-shrink-0">
+        <div className="flex items-center gap-1">
+          <span className="text-[10px] text-white/30 shrink-0 mr-0.5">Sort</span>
+          {SORT_OPTIONS.map(({ value, label }) => (
+            <button
+              key={value}
+              onClick={() => handleSortChange(value)}
+              className={`flex-1 rounded-md py-1 text-[10px] border transition-colors ${
+                sortOrder === value
+                  ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
+                  : "bg-white/5 border-transparent text-white/40 hover:text-white/60"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Result count */}
       <div className="px-3 pb-1.5 flex-shrink-0 h-5">
         {isLoading ? (
@@ -269,6 +310,7 @@ export function CardSearchPanel() {
         onLoadMore={loadMore}
         emptyMessage={query ? `No results for "${query}"` : "No cards found"}
         onZoom={(cardId, cardName, cardImageSmall) => setZoom({ cardId, cardName, cardImageSmall })}
+        ownedCardIds={ownedSet}
       />
 
       <CardZoomModal

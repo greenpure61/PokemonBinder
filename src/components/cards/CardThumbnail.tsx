@@ -9,9 +9,10 @@ import type { DragItem } from "@/types/dnd";
 interface Props {
   card: PokeTCGCard;
   onZoom?: (cardId: string, cardName: string, cardImageSmall: string) => void;
+  isOwned?: boolean;
 }
 
-export function CardThumbnail({ card, onZoom }: Props) {
+export function CardThumbnail({ card, onZoom, isOwned }: Props) {
   const dragData: DragItem = {
     type: "SEARCH_CARD",
     cardId: card.id,
@@ -54,6 +55,14 @@ export function CardThumbnail({ card, onZoom }: Props) {
         className="object-cover select-none"
         draggable={false}
       />
+      {/* Owned badge */}
+      {isOwned && (
+        <div className="absolute top-1 left-1 z-10 rounded-full bg-green-500/90 p-0.5 shadow-md">
+          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+          </svg>
+        </div>
+      )}
       {/* Name + set on hover */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex flex-col justify-end p-1.5 gap-0.5">
         <p className="text-white text-[9px] font-semibold leading-tight truncate">{card.name}</p>
