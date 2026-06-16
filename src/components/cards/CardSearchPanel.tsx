@@ -8,6 +8,12 @@ import type { PokeTCGSet } from "@/types/pokemontcg";
 
 const POKEMON_TYPES = ["Fire", "Water", "Grass", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Colorless"];
 const ALL_SUPERTYPES = ["Pokémon", "Trainer", "Energy"];
+const RARITIES = [
+  "Common", "Uncommon", "Rare", "Rare Holo",
+  "Double Rare", "Ultra Rare", "Illustration Rare",
+  "Special Illustration Rare", "Hyper Rare",
+  "ACE SPEC Rare", "Radiant Rare", "Promo",
+];
 
 function SetPicker({ sets, value, onChange }: { sets: PokeTCGSet[]; value: string; onChange: (id: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -92,7 +98,7 @@ export function CardSearchPanel() {
   const {
     query, setQuery, fetchResults, loadMore, results, isLoading, totalCount,
     selectedTypes, setSelectedTypes, selectedSetId, setSelectedSetId,
-    supertypes, setSupertypes, sets, loadSets,
+    supertypes, setSupertypes, rarity, setRarity, sets, loadSets,
   } = useCardSearchStore();
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -137,6 +143,11 @@ export function CardSearchPanel() {
     // When browsing a specific set, show all card types so the full set is visible
     if (setId) setSupertypes(ALL_SUPERTYPES);
     setSelectedSetId(setId);
+    trigger(100);
+  }
+
+  function handleRarityChange(r: string) {
+    setRarity(r);
     trigger(100);
   }
 
@@ -217,6 +228,25 @@ export function CardSearchPanel() {
           <SetPicker sets={sets} value={selectedSetId} onChange={handleSetChange} />
         </div>
       )}
+
+      {/* Rarity filter */}
+      <div className="px-3 pb-2 flex-shrink-0">
+        <div className="flex flex-wrap gap-1">
+          {RARITIES.map((r) => (
+            <button
+              key={r}
+              onClick={() => handleRarityChange(rarity === r ? "" : r)}
+              className={`rounded-md px-2 py-0.5 text-[10px] transition-colors ${
+                rarity === r
+                  ? "bg-amber-500/25 text-amber-300 border border-amber-500/40"
+                  : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 border border-transparent"
+              }`}
+            >
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* Result count */}
       <div className="px-3 pb-1.5 flex-shrink-0 h-5">

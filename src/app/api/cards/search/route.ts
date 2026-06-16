@@ -10,10 +10,13 @@ export async function GET(req: Request) {
   const orderBy = searchParams.get("orderBy") ?? undefined;
   const types = searchParams.get("types")?.split(",").filter(Boolean);
   const supertypes = searchParams.get("supertypes")?.split(",").filter(Boolean);
+  const rarity = searchParams.get("rarity") ?? undefined;
 
   try {
-    const data = await searchCards({ query, page, pageSize, setId, orderBy, types, supertypes });
-    return NextResponse.json(data);
+    const data = await searchCards({ query, page, pageSize, setId, orderBy, types, supertypes, rarity });
+    return NextResponse.json(data, {
+      headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" },
+    });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Search failed";
     return NextResponse.json({ error: message }, { status: 502 });

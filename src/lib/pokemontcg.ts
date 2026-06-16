@@ -23,6 +23,7 @@ export async function searchCards(params: CardSearchParams): Promise<PokeTCGResp
     }
   }
   if (params.types?.length) queryParts.push(`types:${params.types[0]}`);
+  if (params.rarity) queryParts.push(`rarity:"${params.rarity}"`);
 
   if (queryParts.length) url.searchParams.set("q", queryParts.join(" "));
   url.searchParams.set("page", String(params.page ?? 1));

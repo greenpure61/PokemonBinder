@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import type { BinderWithPages } from "@/types/binder";
 
 const LAYOUT_LABELS = {
@@ -10,18 +11,31 @@ const LAYOUT_LABELS = {
   TWELVE_POCKET: "12-pocket",
 } as const;
 
-function PocketGrid({ layout }: { layout: keyof typeof LAYOUT_LABELS }) {
-  const cols = layout === "FOUR_POCKET" ? 2 : layout === "NINE_POCKET" ? 3 : 4;
-  const rows = layout === "TWELVE_POCKET" ? 3 : cols;
+function CardPreview({ binder }: { binder: BinderWithPages & { _count?: { pages: number } } }) {
+  const cols = binder.pocketLayout === "FOUR_POCKET" ? 2 : binder.pocketLayout === "NINE_POCKET" ? 3 : 4;
+  const rows = binder.pocketLayout === "TWELVE_POCKET" ? 3 : cols;
   const count = cols * rows;
+  const slots = binder.pages[0]?.slots ?? [];
+
   return (
-    <div
-      className="grid gap-0.5 opacity-40"
-      style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}
-    >
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="aspect-[2.5/3.5] rounded-sm bg-white/20" />
-      ))}
+    <div className="grid gap-0.5" style={{ gridTemplateColumns: `repeat(${cols}, 1fr)` }}>
+      {Array.from({ length: count }).map((_, i) => {
+        const slot = slots.find((s) => s.slotIndex === i);
+        if (slot?.cardImageSmall) {
+          return (
+            <div key={i} className="relative aspect-[2.5/3.5] rounded-sm overflow-hidden">
+              <Image
+                src={slot.cardImageSmall}
+                alt={slot.cardName ?? ""}
+                fill
+                sizes="50px"
+                className="object-cover"
+              />
+            </div>
+          );
+        }
+        return <div key={i} className="aspect-[2.5/3.5] rounded-sm bg-white/20 opacity-40" />;
+      })}
     </div>
   );
 }
@@ -47,7 +61,7 @@ export function BinderCard({ binder, onDelete }: BinderCardProps) {
 
       <div className="relative p-5">
         <div className="mb-4">
-          <PocketGrid layout={binder.pocketLayout} />
+          <CardPreview binder={binder} />
         </div>
 
         <div className="flex items-end justify-between">

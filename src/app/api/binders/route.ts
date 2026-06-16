@@ -12,7 +12,14 @@ export async function GET() {
 
   const binders = await prisma.binder.findMany({
     where: { userId: session.user.id },
-    include: { _count: { select: { pages: true } } },
+    include: {
+      _count: { select: { pages: true } },
+      pages: {
+        take: 1,
+        orderBy: { pageIndex: "asc" },
+        include: { slots: { orderBy: { slotIndex: "asc" } } },
+      },
+    },
     orderBy: { updatedAt: "desc" },
   });
 
