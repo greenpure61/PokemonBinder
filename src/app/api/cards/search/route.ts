@@ -11,9 +11,10 @@ export async function GET(req: Request) {
   const types = searchParams.get("types")?.split(",").filter(Boolean);
   const supertypes = searchParams.get("supertypes")?.split(",").filter(Boolean);
   const rarity = searchParams.get("rarity") ?? undefined;
+  const lang = searchParams.get("lang") ?? undefined;
 
   try {
-    const data = await searchCards({ query, page, pageSize, setId, orderBy, types, supertypes, rarity });
+    const data = await searchCards({ query, page, pageSize, setId, orderBy, types, supertypes, rarity, lang });
     return NextResponse.json(data, {
       headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" },
     });

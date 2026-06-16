@@ -38,6 +38,8 @@ export interface PokeTCGResponse {
   pageSize: number;
   count: number;
   totalCount: number;
+  // TCGdex has no total-count, so pagination uses full-page detection instead
+  hasMore?: boolean;
 }
 
 export interface PokeTCGSetsResponse {
@@ -57,4 +59,5 @@ export interface CardSearchParams {
   types?: string[];
   supertypes?: string[];
   rarity?: string;
+  lang?: string;
 }
