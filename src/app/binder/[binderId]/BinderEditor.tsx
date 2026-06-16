@@ -36,6 +36,7 @@ export function BinderEditor({ binderId }: Props) {
   const isDirty = useBinderStore((s) => s.isDirty);
   const isSaving = useBinderStore((s) => s.isSaving);
   const currentSpreadIndex = useBinderStore((s) => s.currentSpreadIndex);
+  const goToSpread = useBinderStore((s) => s.goToSpread);
   const updateSlot = useBinderStore((s) => s.updateSlot);
   const swapSlots = useBinderStore((s) => s.swapSlots);
 
@@ -62,6 +63,18 @@ export function BinderEditor({ binderId }: Props) {
   useEffect(() => {
     if (binderData) setBinder(binderData);
   }, [binderData, setBinder]);
+
+  useEffect(() => {
+    if (!binder) return;
+    const totalSpreads = Math.ceil(binder.pageCount / 2);
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.key === "ArrowRight") goToSpread(Math.min(currentSpreadIndex + 1, totalSpreads - 1));
+      if (e.key === "ArrowLeft") goToSpread(Math.max(currentSpreadIndex - 1, 0));
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [binder, currentSpreadIndex, goToSpread]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -128,14 +141,39 @@ export function BinderEditor({ binderId }: Props) {
         leftSidebar={<CardSearchPanel />}
         rightSidebar={<RightSidebar onExport={handleExport} />}
       >
-        <div ref={flatRef} className="w-full h-full">
-          <BinderPageFlat
-            leftPage={leftPage}
-            rightPage={rightPage}
-            layout={binder.pocketLayout}
-            onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
-            onRemove={(pageId, slotIndex) => updateSlot(pageId, slotIndex, null)}
-          />
+        <div className="flex flex-col w-full flex-1 min-h-0 gap-3">
+          <div ref={flatRef} className="flex-1 min-h-0 flex">
+            <BinderPageFlat
+              leftPage={leftPage}
+              rightPage={rightPage}
+              layout={binder.pocketLayout}
+              spreadIndex={currentSpreadIndex}
+              pageCount={binder.pageCount}
+              onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
+              onRemove={(pageId, slotIndex) => updateSlot(pageId, slotIndex, null)}
+            />
+          </div>
+
+          {/* Bottom navigation */}
+          <div className="flex items-center justify-center gap-3 flex-shrink-0">
+            <button
+              onClick={() => goToSpread(currentSpreadIndex - 1)}
+              disabled={currentSpreadIndex === 0}
+              className="rounded-lg border border-white/10 px-4 py-1.5 text-xs text-white/50 hover:text-white hover:border-white/25 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Prev
+            </button>
+            <span className="text-xs text-white/30 tabular-nums min-w-[80px] text-center">
+              Spread {currentSpreadIndex + 1} / {Math.ceil(binder.pageCount / 2)}
+            </span>
+            <button
+              onClick={() => goToSpread(currentSpreadIndex + 1)}
+              disabled={currentSpreadIndex >= Math.ceil(binder.pageCount / 2) - 1}
+              className="rounded-lg border border-white/10 px-4 py-1.5 text-xs text-white/50 hover:text-white hover:border-white/25 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+            >
+              Next →
+            </button>
+          </div>
         </div>
       </EditorLayout>
 

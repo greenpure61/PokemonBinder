@@ -47,7 +47,7 @@ export function EditorLayout({ topNav, leftSidebar, children, rightSidebar }: Pr
           </div>
         </motion.aside>
 
-        <main className="flex-1 flex flex-col overflow-hidden p-4 min-w-0">
+        <main className="flex-1 flex flex-col overflow-hidden p-4 min-w-0 min-h-0">
           {children}
         </main>
 

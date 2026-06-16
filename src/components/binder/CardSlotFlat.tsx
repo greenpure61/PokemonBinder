@@ -86,8 +86,8 @@ export function CardSlotFlat({ pageId, slotIndex, slot, onZoom, onRemove }: Prop
       <div
         ref={mergedRef}
         onContextMenu={handleContextMenu}
-        className={`group relative aspect-[2.5/3.5] rounded-lg transition-all duration-150 ${
-          isOver ? "ring-2 ring-white/60 scale-105" : ""
+        className={`group relative h-full w-full rounded-lg transition-all duration-150 ${
+          isOver ? "ring-2 ring-white/60 scale-[1.03]" : ""
         } ${isDragging ? "opacity-30" : ""}`}
       >
         {hasCard ? (
@@ -102,7 +102,7 @@ export function CardSlotFlat({ pageId, slotIndex, slot, onZoom, onRemove }: Prop
               alt={slot!.cardName ?? "Card"}
               fill
               sizes="120px"
-              className="rounded-lg object-cover select-none"
+              className="rounded-lg object-contain select-none"
               draggable={false}
             />
             <button

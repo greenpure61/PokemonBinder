@@ -45,11 +45,13 @@ export function PublicBinderView({ binder }: Props) {
         </Link>
       </header>
 
-      <div className="flex-1 min-h-0 p-4">
+      <div className="flex-1 min-h-0 p-4 flex">
         <BinderPageFlat
           leftPage={leftPage}
           rightPage={rightPage}
           layout={binder.pocketLayout}
+          spreadIndex={currentSpreadIndex}
+          pageCount={binder.pageCount}
           onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
           onRemove={() => {}}
         />
