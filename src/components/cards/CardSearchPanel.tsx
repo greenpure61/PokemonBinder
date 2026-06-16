@@ -37,8 +37,14 @@ function SetPicker({
 
   const displayName = (s: PokeTCGSet) => getDisplayName?.(s) ?? s.name;
 
+  // Some TCGdex language lists repeat set IDs; dedupe so React keys stay unique.
+  const uniqueSets = useMemo(() => {
+    const seen = new Set<string>();
+    return sets.filter((s) => (seen.has(s.id) ? false : (seen.add(s.id), true)));
+  }, [sets]);
+
   const filtered = filter
-    ? sets.filter((s) => {
+    ? uniqueSets.filter((s) => {
         const f = filter.toLowerCase();
         return (
           displayName(s).toLowerCase().includes(f) ||
@@ -46,7 +52,7 @@ function SetPicker({
           s.series.toLowerCase().includes(f)
         );
       })
-    : sets;
+    : uniqueSets;
 
   const selectedSet = sets.find((s) => s.id === value);
 

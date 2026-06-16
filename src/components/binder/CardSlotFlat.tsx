@@ -98,15 +98,21 @@ export function CardSlotFlat({ pageId, slotIndex, slot, priority, onZoom, onRemo
             className="relative w-full h-full cursor-grab active:cursor-grabbing"
             onClick={() => onZoom(slot!.cardId!, slot!.cardName ?? "", slot!.cardImageSmall ?? "")}
           >
-            <Image
-              src={slot!.cardImageSmall!}
-              alt={slot!.cardName ?? "Card"}
-              fill
-              sizes="120px"
-              className="rounded-lg object-contain select-none"
-              draggable={false}
-              priority={priority}
-            />
+            {slot!.cardImageSmall ? (
+              <Image
+                src={slot!.cardImageSmall}
+                alt={slot!.cardName ?? "Card"}
+                fill
+                sizes="120px"
+                className="rounded-lg object-contain select-none"
+                draggable={false}
+                priority={priority}
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center rounded-lg bg-white/5 p-1 text-center">
+                <span className="text-[10px] leading-tight text-white/50">{slot!.cardName ?? "Card"}</span>
+              </div>
+            )}
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => { e.stopPropagation(); onRemove(pageId, slotIndex); }}
