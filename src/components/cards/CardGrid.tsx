@@ -9,9 +9,10 @@ interface Props {
   isLoading: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
+  emptyMessage?: string;
 }
 
-export function CardGrid({ cards, isLoading, hasMore, onLoadMore }: Props) {
+export function CardGrid({ cards, isLoading, hasMore, onLoadMore, emptyMessage }: Props) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -27,9 +28,8 @@ export function CardGrid({ cards, isLoading, hasMore, onLoadMore }: Props) {
 
   if (!isLoading && cards.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-12 text-center">
-        <div className="text-3xl mb-2">🔍</div>
-        <p className="text-xs text-white/30">Search for cards above</p>
+      <div className="flex flex-col items-center justify-center py-12 text-center px-4">
+        <p className="text-xs text-white/30">{emptyMessage ?? "No cards found"}</p>
       </div>
     );
   }

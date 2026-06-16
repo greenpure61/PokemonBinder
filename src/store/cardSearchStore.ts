@@ -9,9 +9,11 @@ interface CardSearchState {
   isLoading: boolean;
   selectedSetId: string;
   selectedTypes: string[];
+  supertype: string;
   setQuery: (q: string) => void;
   setSelectedSetId: (id: string) => void;
   setSelectedTypes: (types: string[]) => void;
+  setSupertype: (s: string) => void;
   fetchResults: () => Promise<void>;
   loadMore: () => Promise<void>;
   reset: () => void;
@@ -24,14 +26,17 @@ async function fetchCards(params: {
   page: number;
   setId: string;
   types: string[];
+  supertype: string;
 }) {
   const url = new URL("/api/cards/search", window.location.origin);
   if (params.query) url.searchParams.set("q", params.query);
   url.searchParams.set("page", String(params.page));
   url.searchParams.set("pageSize", String(PAGE_SIZE));
   if (params.setId) url.searchParams.set("setId", params.setId);
-  if (params.types.length) url.searchParams.set("types", params.types.join(","));
-  url.searchParams.set("supertype", "Pokémon");
+  // Types only apply to Pokémon cards
+  if (params.types.length && params.supertype === "Pokémon")
+    url.searchParams.set("types", params.types.join(","));
+  if (params.supertype) url.searchParams.set("supertype", params.supertype);
 
   const res = await fetch(url.toString());
   if (!res.ok) throw new Error("Card search failed");
@@ -46,16 +51,18 @@ export const useCardSearchStore = create<CardSearchState>((set, get) => ({
   isLoading: false,
   selectedSetId: "",
   selectedTypes: [],
+  supertype: "Pokémon",
 
   setQuery: (query) => set({ query, results: [], page: 1, totalCount: 0 }),
   setSelectedSetId: (selectedSetId) => set({ selectedSetId, results: [], page: 1 }),
   setSelectedTypes: (selectedTypes) => set({ selectedTypes, results: [], page: 1 }),
+  setSupertype: (supertype) => set({ supertype, selectedTypes: [], results: [], page: 1 }),
 
   fetchResults: async () => {
-    const { query, selectedSetId, selectedTypes } = get();
+    const { query, selectedSetId, selectedTypes, supertype } = get();
     set({ isLoading: true, results: [], page: 1 });
     try {
-      const data = await fetchCards({ query, page: 1, setId: selectedSetId, types: selectedTypes });
+      const data = await fetchCards({ query, page: 1, setId: selectedSetId, types: selectedTypes, supertype });
       set({ results: data.data ?? [], totalCount: data.totalCount ?? 0, page: 1 });
     } finally {
       set({ isLoading: false });
@@ -63,12 +70,12 @@ export const useCardSearchStore = create<CardSearchState>((set, get) => ({
   },
 
   loadMore: async () => {
-    const { query, page, results, totalCount, isLoading, selectedSetId, selectedTypes } = get();
+    const { query, page, results, totalCount, isLoading, selectedSetId, selectedTypes, supertype } = get();
     if (isLoading || results.length >= totalCount) return;
     const nextPage = page + 1;
     set({ isLoading: true });
     try {
-      const data = await fetchCards({ query, page: nextPage, setId: selectedSetId, types: selectedTypes });
+      const data = await fetchCards({ query, page: nextPage, setId: selectedSetId, types: selectedTypes, supertype });
       const existingIds = new Set(results.map((c) => c.id));
       const newCards = (data.data ?? []).filter((c: { id: string }) => !existingIds.has(c.id));
       set({ results: [...results, ...newCards], page: nextPage });

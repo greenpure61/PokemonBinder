@@ -28,7 +28,7 @@ export function CardThumbnail({ card }: Props) {
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`relative aspect-[2.5/3.5] cursor-grab active:cursor-grabbing rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.08] hover:-translate-y-0.5 hover:z-10 hover:shadow-[0_8px_24px_rgba(0,0,0,0.6)] hover:ring-1 hover:ring-white/20 ${
+      className={`group relative aspect-[2.5/3.5] cursor-grab active:cursor-grabbing rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.08] hover:-translate-y-0.5 hover:z-10 hover:shadow-[0_8px_24px_rgba(0,0,0,0.6)] hover:ring-1 hover:ring-white/20 ${
         isDragging ? "opacity-30 scale-95" : ""
       }`}
     >
@@ -40,6 +40,11 @@ export function CardThumbnail({ card }: Props) {
         className="object-cover select-none"
         draggable={false}
       />
+      {/* Name + set on hover */}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex flex-col justify-end p-1.5 gap-0.5">
+        <p className="text-white text-[9px] font-semibold leading-tight truncate">{card.name}</p>
+        <p className="text-white/55 text-[8px] leading-tight truncate">{card.set.name}</p>
+      </div>
     </div>
   );
 }
