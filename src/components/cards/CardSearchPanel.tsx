@@ -10,9 +10,9 @@ import type { PokeTCGSet } from "@/types/pokemontcg";
 const POKEMON_TYPES = ["Fire", "Water", "Grass", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Colorless"];
 const ALL_SUPERTYPES = ["Pokémon", "Trainer", "Energy"];
 const SORT_OPTIONS: { value: "newest" | "name" | "number"; label: string }[] = [
-  { value: "newest", label: "Newest" },
-  { value: "name", label: "Name" },
+  // "Newest" is omitted: TCGdex's /cards endpoint can't sort by release date.
   { value: "number", label: "Number" },
+  { value: "name", label: "Name" },
 ];
 const LANGUAGES: { value: "en" | "ja"; label: string }[] = [
   { value: "en", label: "English" },
@@ -219,7 +219,7 @@ export function CardSearchPanel() {
       setSupertypes(ALL_SUPERTYPES);
       setSortOrder("number");
     } else {
-      setSortOrder("newest");
+      setSortOrder("number");
     }
     setSelectedSetId(setId);
     trigger(100);

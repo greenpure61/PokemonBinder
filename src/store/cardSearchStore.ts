@@ -59,8 +59,8 @@ async function fetchCards(params: {
   url.searchParams.set("pageSize", String(PAGE_SIZE));
   url.searchParams.set("lang", params.language);
   if (params.setId) url.searchParams.set("setId", params.setId);
-  // Order mode is interpreted server-side (newest = default, name, number)
-  url.searchParams.set("orderBy", params.setId ? "number" : params.sortOrder);
+  // Order mode is interpreted server-side (name or number); applies to set view too
+  url.searchParams.set("orderBy", params.sortOrder);
   // Only apply type filter when searching Pokémon exclusively
   if (params.types.length && params.supertypes.length === 1 && params.supertypes[0] === "Pokémon")
     url.searchParams.set("types", params.types.join(","));
@@ -86,7 +86,7 @@ export const useCardSearchStore = create<CardSearchState>((set, get) => ({
   selectedTypes: [],
   supertypes: ["Pokémon"],
   rarity: "",
-  sortOrder: "newest",
+  sortOrder: "number",
   sets: [],
   setsLoaded: false,
   enSetNames: {},
@@ -195,5 +195,5 @@ export const useCardSearchStore = create<CardSearchState>((set, get) => ({
     }
   },
 
-  reset: () => set({ query: "", results: [], page: 1, totalCount: 0, hasMore: false, isLoading: false, rarity: "", sortOrder: "newest" }),
+  reset: () => set({ query: "", results: [], page: 1, totalCount: 0, hasMore: false, isLoading: false, rarity: "", sortOrder: "number" }),
 }));

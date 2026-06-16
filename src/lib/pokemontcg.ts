@@ -117,7 +117,11 @@ export async function searchCards(params: CardSearchParams): Promise<PokeTCGResp
     if (!res.ok) throw new Error(`TCGdex API error: ${res.status}`);
     const data: TCGSetObject = await res.json();
     const set = normalizeSet(data);
-    const cards = sortByNumber((data.cards ?? []).map((c) => normalizeBrief(c, set)));
+    const mapped = (data.cards ?? []).map((c) => normalizeBrief(c, set));
+    const cards =
+      params.orderBy === "name"
+        ? [...mapped].sort((a, b) => a.name.localeCompare(b.name))
+        : sortByNumber(mapped);
     return { data: cards, page: 1, pageSize: cards.length, count: cards.length, totalCount: set.total || cards.length, hasMore: false };
   }
 
