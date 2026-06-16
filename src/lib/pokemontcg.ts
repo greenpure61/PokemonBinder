@@ -15,7 +15,13 @@ export async function searchCards(params: CardSearchParams): Promise<PokeTCGResp
   const queryParts: string[] = [];
   if (params.query) queryParts.push(`name:${params.query}*`);
   if (params.setId) queryParts.push(`set.id:${params.setId}`);
-  if (params.supertype) queryParts.push(`supertype:${params.supertype}`);
+  if (params.supertypes?.length) {
+    if (params.supertypes.length === 1) {
+      queryParts.push(`supertype:${params.supertypes[0]}`);
+    } else {
+      queryParts.push(`(${params.supertypes.map((s) => `supertype:${s}`).join(" OR ")})`);
+    }
+  }
   if (params.types?.length) queryParts.push(`types:${params.types[0]}`);
 
   if (queryParts.length) url.searchParams.set("q", queryParts.join(" "));

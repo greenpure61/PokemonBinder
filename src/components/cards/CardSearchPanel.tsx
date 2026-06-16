@@ -5,14 +5,93 @@ import { useCardSearchStore } from "@/store/cardSearchStore";
 import { CardGrid } from "./CardGrid";
 import type { PokeTCGSet } from "@/types/pokemontcg";
 
-const TYPES = ["Fire", "Water", "Grass", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Colorless"];
-const SUPERTYPES = ["Pokémon", "Trainer", "Energy"];
+const POKEMON_TYPES = ["Fire", "Water", "Grass", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Colorless"];
+const ALL_SUPERTYPES = ["Pokémon", "Trainer", "Energy"];
+
+function SetPicker({ sets, value, onChange }: { sets: PokeTCGSet[]; value: string; onChange: (id: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const filtered = filter
+    ? sets.filter((s) =>
+        s.name.toLowerCase().includes(filter.toLowerCase()) ||
+        s.series.toLowerCase().includes(filter.toLowerCase())
+      )
+    : sets;
+
+  const selectedSet = sets.find((s) => s.id === value);
+
+  useEffect(() => {
+    if (!open) { setFilter(""); return; }
+    setTimeout(() => inputRef.current?.focus(), 0);
+    function handleOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between rounded-lg bg-white/5 border border-white/10 px-2.5 py-1.5 text-xs hover:border-white/20 focus:outline-none transition-colors"
+      >
+        <span className={`truncate ${selectedSet ? "text-white/80" : "text-white/35"}`}>
+          {selectedSet ? selectedSet.name : "All sets"}
+        </span>
+        <svg
+          className={`w-3 h-3 text-white/40 flex-shrink-0 ml-2 transition-transform ${open ? "rotate-180" : ""}`}
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-[#141c2e] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+          <div className="p-2 border-b border-white/5">
+            <input
+              ref={inputRef}
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter sets…"
+              className="w-full bg-white/5 rounded-lg px-2.5 py-1 text-xs text-white placeholder:text-white/25 focus:outline-none"
+            />
+          </div>
+          <div className="overflow-y-auto max-h-52">
+            <button
+              onClick={() => { onChange(""); setOpen(false); }}
+              className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-white/5 ${!value ? "text-white font-medium" : "text-white/50"}`}
+            >
+              All sets
+            </button>
+            {filtered.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => { onChange(s.id); setOpen(false); }}
+                className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-white/5 truncate ${value === s.id ? "text-indigo-300 font-medium" : "text-white/55"}`}
+              >
+                {s.name}
+              </button>
+            ))}
+            {filtered.length === 0 && (
+              <p className="px-3 py-3 text-xs text-white/30 text-center">No sets found</p>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function CardSearchPanel() {
   const {
     query, setQuery, fetchResults, loadMore, results, isLoading, totalCount,
     selectedTypes, setSelectedTypes, selectedSetId, setSelectedSetId,
-    supertype, setSupertype,
+    supertypes, setSupertypes,
   } = useCardSearchStore();
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -41,13 +120,18 @@ export function CardSearchPanel() {
     inputRef.current?.focus();
   }
 
-  function toggleType(type: string) {
-    setSelectedTypes(selectedTypes.includes(type) ? selectedTypes.filter((t) => t !== type) : [type]);
+  function toggleSupertype(st: string) {
+    // Don't allow deselecting the last one
+    if (supertypes.includes(st) && supertypes.length === 1) return;
+    const next = supertypes.includes(st)
+      ? supertypes.filter((s) => s !== st)
+      : [...supertypes, st];
+    setSupertypes(next);
     trigger(100);
   }
 
-  function handleSupertypeChange(st: string) {
-    setSupertype(st);
+  function toggleType(type: string) {
+    setSelectedTypes(selectedTypes.includes(type) ? selectedTypes.filter((t) => t !== type) : [type]);
     trigger(100);
   }
 
@@ -55,6 +139,8 @@ export function CardSearchPanel() {
     setSelectedSetId(setId);
     trigger(100);
   }
+
+  const onlyPokemon = supertypes.length === 1 && supertypes[0] === "Pokémon";
 
   return (
     <div className="flex flex-col h-full">
@@ -86,14 +172,16 @@ export function CardSearchPanel() {
           )}
         </div>
 
-        {/* Supertype tabs */}
-        <div className="flex gap-0.5 bg-white/5 rounded-lg p-0.5">
-          {SUPERTYPES.map((st) => (
+        {/* Supertype multi-select — click to toggle, at least one must remain active */}
+        <div className="flex gap-1">
+          {ALL_SUPERTYPES.map((st) => (
             <button
               key={st}
-              onClick={() => handleSupertypeChange(st)}
-              className={`flex-1 rounded-md py-1 text-[11px] font-medium transition-colors ${
-                supertype === st ? "bg-white/15 text-white" : "text-white/40 hover:text-white/60"
+              onClick={() => toggleSupertype(st)}
+              className={`flex-1 rounded-lg py-1.5 text-[11px] font-medium border transition-colors ${
+                supertypes.includes(st)
+                  ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
+                  : "bg-white/5 border-white/10 text-white/40 hover:text-white/60"
               }`}
             >
               {st}
@@ -102,11 +190,11 @@ export function CardSearchPanel() {
         </div>
       </div>
 
-      {/* Type filters — Pokémon only */}
-      {supertype === "Pokémon" && (
+      {/* Pokémon type filters — only shown when exclusively browsing Pokémon */}
+      {onlyPokemon && (
         <div className="px-3 pb-2 flex-shrink-0">
           <div className="flex flex-wrap gap-1">
-            {TYPES.map((type) => (
+            {POKEMON_TYPES.map((type) => (
               <button
                 key={type}
                 onClick={() => toggleType(type)}
@@ -126,24 +214,7 @@ export function CardSearchPanel() {
       {/* Set filter */}
       {sets.length > 0 && (
         <div className="px-3 pb-2 flex-shrink-0">
-          <div className="relative">
-            <select
-              value={selectedSetId}
-              onChange={(e) => handleSetChange(e.target.value)}
-              style={{ colorScheme: "dark" }}
-              className="w-full appearance-none rounded-lg bg-white/5 border border-white/10 pl-2.5 pr-7 py-1.5 text-xs text-white/70 focus:outline-none focus:border-white/25 transition-colors cursor-pointer"
-            >
-              <option value="">All sets</option>
-              {sets.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-            <svg className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-white/40 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </div>
+          <SetPicker sets={sets} value={selectedSetId} onChange={handleSetChange} />
         </div>
       )}
 
@@ -158,7 +229,6 @@ export function CardSearchPanel() {
         ) : null}
       </div>
 
-      {/* Card grid */}
       <CardGrid
         cards={results}
         isLoading={isLoading}

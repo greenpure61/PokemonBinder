@@ -38,11 +38,11 @@ export function EditorLayout({ topNav, leftSidebar, children, rightSidebar }: Pr
         {/* Left sidebar — desktop animated width */}
         <motion.aside
           initial={false}
-          animate={{ width: leftOpen ? 256 : 0 }}
+          animate={{ width: leftOpen ? 320 : 0 }}
           transition={SPRING}
           className="hidden lg:block flex-shrink-0 overflow-hidden"
         >
-          <div className="w-64 h-full flex flex-col border-r border-white/5">
+          <div className="w-80 h-full flex flex-col border-r border-white/5">
             {leftSidebar}
           </div>
         </motion.aside>

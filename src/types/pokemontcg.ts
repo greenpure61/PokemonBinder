@@ -55,5 +55,5 @@ export interface CardSearchParams {
   orderBy?: string;
   setId?: string;
   types?: string[];
-  supertype?: string;
+  supertypes?: string[];
 }
