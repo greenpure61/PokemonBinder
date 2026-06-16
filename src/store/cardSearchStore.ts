@@ -17,6 +17,8 @@ interface CardSearchState {
   reset: () => void;
 }
 
+const PAGE_SIZE = 100;
+
 async function fetchCards(params: {
   query: string;
   page: number;
@@ -26,6 +28,7 @@ async function fetchCards(params: {
   const url = new URL("/api/cards/search", window.location.origin);
   if (params.query) url.searchParams.set("q", params.query);
   url.searchParams.set("page", String(params.page));
+  url.searchParams.set("pageSize", String(PAGE_SIZE));
   if (params.setId) url.searchParams.set("setId", params.setId);
   if (params.types.length) url.searchParams.set("types", params.types.join(","));
   url.searchParams.set("supertype", "Pokémon");
