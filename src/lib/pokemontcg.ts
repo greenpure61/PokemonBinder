@@ -32,7 +32,7 @@ export async function searchCards(params: CardSearchParams): Promise<PokeTCGResp
 
   const res = await fetch(url.toString(), {
     headers: getHeaders(),
-    next: { revalidate: 300 },
+    next: { revalidate: 3600 },
   });
 
   if (!res.ok) throw new Error(`PokéTCG API error: ${res.status}`);

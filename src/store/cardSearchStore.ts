@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { PokeTCGCard } from "@/types/pokemontcg";
+import type { PokeTCGCard, PokeTCGSet } from "@/types/pokemontcg";
 
 const ALL_SUPERTYPES = ["Pokémon", "Trainer", "Energy"];
 const PAGE_SIZE = 100;
@@ -13,12 +13,15 @@ interface CardSearchState {
   selectedSetId: string;
   selectedTypes: string[];
   supertypes: string[];
+  sets: PokeTCGSet[];
+  setsLoaded: boolean;
   setQuery: (q: string) => void;
   setSelectedSetId: (id: string) => void;
   setSelectedTypes: (types: string[]) => void;
   setSupertypes: (s: string[]) => void;
   fetchResults: () => Promise<void>;
   loadMore: () => Promise<void>;
+  loadSets: () => Promise<void>;
   reset: () => void;
 }
 
@@ -57,6 +60,8 @@ export const useCardSearchStore = create<CardSearchState>((set, get) => ({
   selectedSetId: "",
   selectedTypes: [],
   supertypes: ["Pokémon"],
+  sets: [],
+  setsLoaded: false,
 
   setQuery: (query) => set({ query, results: [], page: 1, totalCount: 0 }),
   setSelectedSetId: (selectedSetId) => set({ selectedSetId, results: [], page: 1 }),
@@ -86,6 +91,17 @@ export const useCardSearchStore = create<CardSearchState>((set, get) => ({
       set({ results: [...results, ...newCards], page: nextPage });
     } finally {
       set({ isLoading: false });
+    }
+  },
+
+  loadSets: async () => {
+    if (get().setsLoaded) return;
+    try {
+      const res = await fetch("/api/cards/sets");
+      const data = await res.json();
+      set({ sets: data.data ?? [], setsLoaded: true });
+    } catch {
+      // non-fatal — set picker just won't appear
     }
   },
 

@@ -11,11 +11,12 @@ interface Props {
   pageId: string;
   slotIndex: number;
   slot: CardSlot | undefined;
+  priority?: boolean;
   onZoom: (cardId: string, cardName: string, cardImageSmall: string) => void;
   onRemove: (pageId: string, slotIndex: number) => void;
 }
 
-export function CardSlotFlat({ pageId, slotIndex, slot, onZoom, onRemove }: Props) {
+export function CardSlotFlat({ pageId, slotIndex, slot, priority, onZoom, onRemove }: Props) {
   const hasCard = !!slot?.cardId;
   const dropId = `drop-${pageId}-${slotIndex}`;
   const dragId = `slot-${pageId}-${slotIndex}`;
@@ -94,7 +95,7 @@ export function CardSlotFlat({ pageId, slotIndex, slot, onZoom, onRemove }: Prop
           <div
             {...listeners}
             {...attributes}
-            className="w-full h-full cursor-grab active:cursor-grabbing"
+            className="relative w-full h-full cursor-grab active:cursor-grabbing"
             onClick={() => onZoom(slot!.cardId!, slot!.cardName ?? "", slot!.cardImageSmall ?? "")}
           >
             <Image
@@ -104,6 +105,7 @@ export function CardSlotFlat({ pageId, slotIndex, slot, onZoom, onRemove }: Prop
               sizes="120px"
               className="rounded-lg object-contain select-none"
               draggable={false}
+              priority={priority}
             />
             <button
               onPointerDown={(e) => e.stopPropagation()}

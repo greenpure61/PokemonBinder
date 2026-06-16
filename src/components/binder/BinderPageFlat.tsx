@@ -35,6 +35,7 @@ function SinglePage({ page, layout, pageNumber, onZoom, onRemove }: PageProps) {
               pageId={page.id}
               slotIndex={i}
               slot={slot}
+              priority={i === 0}
               onZoom={onZoom}
               onRemove={onRemove}
             />

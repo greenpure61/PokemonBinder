@@ -5,6 +5,7 @@ import { useCardSearchStore } from "@/store/cardSearchStore";
 import { CardGrid } from "./CardGrid";
 import type { PokeTCGSet } from "@/types/pokemontcg";
 
+
 const POKEMON_TYPES = ["Fire", "Water", "Grass", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Colorless"];
 const ALL_SUPERTYPES = ["Pokémon", "Trainer", "Energy"];
 
@@ -91,18 +92,15 @@ export function CardSearchPanel() {
   const {
     query, setQuery, fetchResults, loadMore, results, isLoading, totalCount,
     selectedTypes, setSelectedTypes, selectedSetId, setSelectedSetId,
-    supertypes, setSupertypes,
+    supertypes, setSupertypes, sets, loadSets,
   } = useCardSearchStore();
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [sets, setSets] = useState<PokeTCGSet[]>([]);
 
   useEffect(() => {
     fetchResults();
-    fetch("/api/cards/sets")
-      .then((r) => r.json())
-      .then((data) => setSets(data.data ?? []));
+    loadSets();
   }, []);
 
   function trigger(delay = 400) {
