@@ -9,29 +9,43 @@ import type { PokeTCGSet } from "@/types/pokemontcg";
 
 const POKEMON_TYPES = ["Fire", "Water", "Grass", "Lightning", "Psychic", "Fighting", "Darkness", "Metal", "Dragon", "Colorless"];
 const ALL_SUPERTYPES = ["Pokémon", "Trainer", "Energy"];
-const RARITIES = [
-  "Common", "Uncommon", "Rare", "Rare Holo",
-  "Double Rare", "Ultra Rare", "Illustration Rare",
-  "Special Illustration Rare", "Hyper Rare",
-  "ACE SPEC Rare", "Radiant Rare", "Promo",
-];
 const SORT_OPTIONS: { value: "newest" | "name" | "number"; label: string }[] = [
   { value: "newest", label: "Newest" },
   { value: "name", label: "Name" },
   { value: "number", label: "Number" },
 ];
+const LANGUAGES: { value: "en" | "ja"; label: string }[] = [
+  { value: "en", label: "English" },
+  { value: "ja", label: "日本語" },
+];
 
-function SetPicker({ sets, value, onChange }: { sets: PokeTCGSet[]; value: string; onChange: (id: string) => void }) {
+function SetPicker({
+  sets,
+  value,
+  onChange,
+  getDisplayName,
+}: {
+  sets: PokeTCGSet[];
+  value: string;
+  onChange: (id: string) => void;
+  getDisplayName?: (s: PokeTCGSet) => string;
+}) {
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const displayName = (s: PokeTCGSet) => getDisplayName?.(s) ?? s.name;
+
   const filtered = filter
-    ? sets.filter((s) =>
-        s.name.toLowerCase().includes(filter.toLowerCase()) ||
-        s.series.toLowerCase().includes(filter.toLowerCase())
-      )
+    ? sets.filter((s) => {
+        const f = filter.toLowerCase();
+        return (
+          displayName(s).toLowerCase().includes(f) ||
+          s.name.toLowerCase().includes(f) ||
+          s.series.toLowerCase().includes(f)
+        );
+      })
     : sets;
 
   const selectedSet = sets.find((s) => s.id === value);
@@ -53,7 +67,7 @@ function SetPicker({ sets, value, onChange }: { sets: PokeTCGSet[]; value: strin
         className="w-full flex items-center justify-between rounded-lg bg-white/5 border border-white/10 px-2.5 py-1.5 text-xs hover:border-white/20 focus:outline-none transition-colors"
       >
         <span className={`truncate ${selectedSet ? "text-white/80" : "text-white/35"}`}>
-          {selectedSet ? selectedSet.name : "All sets"}
+          {selectedSet ? displayName(selectedSet) : "All sets"}
         </span>
         <svg
           className={`w-3 h-3 text-white/40 flex-shrink-0 ml-2 transition-transform ${open ? "rotate-180" : ""}`}
@@ -87,7 +101,7 @@ function SetPicker({ sets, value, onChange }: { sets: PokeTCGSet[]; value: strin
                 onClick={() => { onChange(s.id); setOpen(false); }}
                 className={`w-full text-left px-3 py-1.5 text-xs transition-colors hover:bg-white/5 truncate ${value === s.id ? "text-indigo-300 font-medium" : "text-white/55"}`}
               >
-                {s.name}
+                {displayName(s)}
               </button>
             ))}
             {filtered.length === 0 && (
@@ -102,11 +116,13 @@ function SetPicker({ sets, value, onChange }: { sets: PokeTCGSet[]; value: strin
 
 export function CardSearchPanel() {
   const {
-    query, setQuery, fetchResults, loadMore, results, isLoading, totalCount,
+    query, setQuery, fetchResults, loadMore, results, isLoading, totalCount, hasMore,
+    language, setLanguage,
     selectedTypes, setSelectedTypes, selectedSetId, setSelectedSetId,
     supertypes, setSupertypes, rarity, setRarity,
     sortOrder, setSortOrder,
-    sets, loadSets,
+    sets, loadSets, rarities, loadRarities,
+    enSetNames, loadEnSetNames,
     ownedCardIds, loadOwnedCards,
   } = useCardSearchStore();
 
@@ -116,6 +132,18 @@ export function CardSearchPanel() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const ownedSet = useMemo(() => new Set(ownedCardIds), [ownedCardIds]);
+
+  // Search results from /cards carry no set details — fill in set names from the loaded set list.
+  const setNameById = useMemo(() => new Map(sets.map((s) => [s.id, s.name])), [sets]);
+  const enriched = useMemo(
+    () =>
+      results.map((c) =>
+        c.set.name || !setNameById.has(c.set.id)
+          ? c
+          : { ...c, set: { ...c.set, name: setNameById.get(c.set.id) ?? "" } }
+      ),
+    [results, setNameById]
+  );
 
   // Set completion — count owned cards whose id belongs to the selected set
   const setCompletion = useMemo(() => {
@@ -132,8 +160,22 @@ export function CardSearchPanel() {
   useEffect(() => {
     fetchResults();
     loadSets();
+    loadRarities();
     loadOwnedCards();
   }, []);
+
+  function handleLanguageChange(l: "en" | "ja") {
+    if (l === language) return;
+    setLanguage(l);
+    loadSets();
+    loadRarities();
+    if (l === "ja") loadEnSetNames(); // for translating the set picker
+    trigger(0);
+  }
+
+  // While browsing Japanese, show English set names where an English release shares the set id.
+  const setDisplayName =
+    language === "ja" ? (s: PokeTCGSet) => enSetNames[s.id] ?? s.name : undefined;
 
   function trigger(delay = 400) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -193,7 +235,23 @@ export function CardSearchPanel() {
     <div className="flex flex-col h-full">
       {/* Header + search */}
       <div className="px-3 pt-3 pb-2 flex-shrink-0 space-y-2">
-        <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Card Library</p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-white/50 uppercase tracking-wider">Card Library</p>
+          {/* Language toggle */}
+          <div className="flex gap-0.5 rounded-lg bg-white/5 p-0.5">
+            {LANGUAGES.map(({ value, label }) => (
+              <button
+                key={value}
+                onClick={() => handleLanguageChange(value)}
+                className={`rounded-md px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                  language === value ? "bg-indigo-500/30 text-indigo-200" : "text-white/40 hover:text-white/60"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
 
         <div className="relative">
           <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -237,8 +295,8 @@ export function CardSearchPanel() {
         </div>
       </div>
 
-      {/* Pokémon type filters — only shown when exclusively browsing Pokémon */}
-      {onlyPokemon && (
+      {/* Pokémon type filters — only when browsing Pokémon in English (type names are English) */}
+      {onlyPokemon && language === "en" && (
         <div className="px-3 pb-2 flex-shrink-0">
           <div className="flex flex-wrap gap-1">
             {POKEMON_TYPES.map((type) => (
@@ -261,7 +319,7 @@ export function CardSearchPanel() {
       {/* Set filter */}
       {sets.length > 0 && (
         <div className="px-3 pb-2 flex-shrink-0">
-          <SetPicker sets={sets} value={selectedSetId} onChange={handleSetChange} />
+          <SetPicker sets={sets} value={selectedSetId} onChange={handleSetChange} getDisplayName={setDisplayName} />
 
           {/* Set completion tracker */}
           {setCompletion && (
@@ -283,24 +341,26 @@ export function CardSearchPanel() {
         </div>
       )}
 
-      {/* Rarity filter */}
-      <div className="px-3 pb-2 flex-shrink-0">
-        <div className="flex flex-wrap gap-1">
-          {RARITIES.map((r) => (
-            <button
-              key={r}
-              onClick={() => handleRarityChange(rarity === r ? "" : r)}
-              className={`rounded-md px-2 py-0.5 text-[10px] transition-colors ${
-                rarity === r
-                  ? "bg-amber-500/25 text-amber-300 border border-amber-500/40"
-                  : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 border border-transparent"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
+      {/* Rarity filter — disabled while browsing a single set (set view shows the whole set) */}
+      {rarities.length > 0 && !selectedSetId && (
+        <div className="px-3 pb-2 flex-shrink-0">
+          <div className="flex flex-wrap gap-1">
+            {rarities.map((r) => (
+              <button
+                key={r}
+                onClick={() => handleRarityChange(rarity === r ? "" : r)}
+                className={`rounded-md px-2 py-0.5 text-[10px] transition-colors ${
+                  rarity === r
+                    ? "bg-amber-500/25 text-amber-300 border border-amber-500/40"
+                    : "bg-white/5 text-white/40 hover:bg-white/10 hover:text-white/60 border border-transparent"
+                }`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Sort order */}
       <div className="px-3 pb-2 flex-shrink-0">
@@ -324,19 +384,23 @@ export function CardSearchPanel() {
 
       {/* Result count */}
       <div className="px-3 pb-1.5 flex-shrink-0 h-5">
-        {isLoading ? (
+        {isLoading && results.length === 0 ? (
           <p className="text-xs text-white/20">Searching…</p>
         ) : totalCount > 0 ? (
           <p className="text-xs text-white/25">
             {totalCount.toLocaleString()} {totalCount === 1 ? "card" : "cards"}
           </p>
+        ) : results.length > 0 ? (
+          <p className="text-xs text-white/25">
+            {results.length.toLocaleString()}{hasMore ? "+" : ""} {results.length === 1 ? "card" : "cards"}
+          </p>
         ) : null}
       </div>
 
       <CardGrid
-        cards={results}
+        cards={enriched}
         isLoading={isLoading}
-        hasMore={results.length < totalCount}
+        hasMore={hasMore}
         onLoadMore={loadMore}
         emptyMessage={query ? `No results for "${query}"` : "No cards found"}
         onZoom={(cardId, cardName, cardImageSmall) => setZoom({ cardId, cardName, cardImageSmall })}
@@ -347,6 +411,7 @@ export function CardSearchPanel() {
         cardId={zoom?.cardId ?? null}
         cardName={zoom?.cardName ?? ""}
         cardImageSmall={zoom?.cardImageSmall ?? ""}
+        lang={language}
         onClose={() => setZoom(null)}
       />
     </div>

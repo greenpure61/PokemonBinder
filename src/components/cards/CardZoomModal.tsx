@@ -9,10 +9,11 @@ interface Props {
   cardId: string | null;
   cardName: string;
   cardImageSmall: string;
+  lang?: string;
   onClose: () => void;
 }
 
-export function CardZoomModal({ cardId, cardName, cardImageSmall, onClose }: Props) {
+export function CardZoomModal({ cardId, cardName, cardImageSmall, lang, onClose }: Props) {
   const [fullCard, setFullCard] = useState<PokeTCGCard | null>(null);
   const [wishlistMsg, setWishlistMsg] = useState("");
   const [wishlistLoading, setWishlistLoading] = useState(false);
@@ -22,11 +23,11 @@ export function CardZoomModal({ cardId, cardName, cardImageSmall, onClose }: Pro
     if (!cardId) { setFullCard(null); return; }
     setWishlistMsg("");
     setWishlistLoading(false);
-    fetch(`/api/cards/${cardId}`)
-      .then((r) => r.json())
+    fetch(`/api/cards/${cardId}${lang ? `?lang=${lang}` : ""}`)
+      .then((r) => (r.ok ? r.json() : null))
       .then(setFullCard)
       .catch(() => null);
-  }, [cardId]);
+  }, [cardId, lang]);
 
   async function addToWishlist() {
     if (!fullCard || wishlistLoading) return;

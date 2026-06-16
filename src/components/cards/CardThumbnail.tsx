@@ -47,14 +47,20 @@ export function CardThumbnail({ card, onZoom, isOwned }: Props) {
         isDragging ? "opacity-30 scale-95" : ""
       }`}
     >
-      <Image
-        src={card.images.small}
-        alt={card.name}
-        fill
-        sizes="100px"
-        className="object-cover select-none"
-        draggable={false}
-      />
+      {card.images.small ? (
+        <Image
+          src={card.images.small}
+          alt={card.name}
+          fill
+          sizes="100px"
+          className="object-cover select-none"
+          draggable={false}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/5 p-1.5 text-center">
+          <span className="text-[9px] leading-tight text-white/40">{card.name}</span>
+        </div>
+      )}
       {/* Owned badge */}
       {isOwned && (
         <div className="absolute top-1 left-1 z-10 rounded-full bg-green-500/90 p-0.5 shadow-md">
