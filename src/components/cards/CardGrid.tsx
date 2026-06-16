@@ -17,9 +17,10 @@ export function CardGrid({ cards, isLoading, hasMore, onLoadMore, emptyMessage }
 
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el) return;
+    // Don't create an observer at all when there's nothing left to load
+    if (!el || !hasMore) return;
     const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting && hasMore && !isLoading) onLoadMore(); },
+      (entries) => { if (entries[0].isIntersecting && !isLoading) onLoadMore(); },
       { threshold: 0.1 }
     );
     observer.observe(el);

@@ -136,6 +136,8 @@ export function CardSearchPanel() {
   }
 
   function handleSetChange(setId: string) {
+    // When browsing a specific set, show all card types so the full set is visible
+    if (setId) setSupertypes(ALL_SUPERTYPES);
     setSelectedSetId(setId);
     trigger(100);
   }
