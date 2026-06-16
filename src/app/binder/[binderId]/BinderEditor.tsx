@@ -163,9 +163,11 @@ export function BinderEditor({ binderId }: Props) {
             >
               ← Prev
             </button>
-            <span className="text-xs text-white/30 tabular-nums min-w-[80px] text-center">
-              Spread {currentSpreadIndex + 1} / {Math.ceil(binder.pageCount / 2)}
-            </span>
+            <SpreadJump
+              current={currentSpreadIndex}
+              total={Math.ceil(binder.pageCount / 2)}
+              onJump={goToSpread}
+            />
             <button
               onClick={() => goToSpread(currentSpreadIndex + 1)}
               disabled={currentSpreadIndex >= Math.ceil(binder.pageCount / 2) - 1}
@@ -198,5 +200,41 @@ export function BinderEditor({ binderId }: Props) {
         onClose={() => setZoomCard(null)}
       />
     </DndContext>
+  );
+}
+
+function SpreadJump({ current, total, onJump }: { current: number; total: number; onJump: (i: number) => void }) {
+  const [value, setValue] = useState(String(current + 1));
+  const [editing, setEditing] = useState(false);
+
+  // Keep the input in sync with external spread changes (prev/next, arrow keys)
+  useEffect(() => {
+    if (!editing) setValue(String(current + 1));
+  }, [current, editing]);
+
+  function commit() {
+    setEditing(false);
+    const n = parseInt(value, 10);
+    if (!Number.isNaN(n)) onJump(Math.max(0, Math.min(n - 1, total - 1)));
+    else setValue(String(current + 1));
+  }
+
+  return (
+    <span className="flex items-center gap-1.5 text-xs text-white/30 tabular-nums">
+      <span>Spread</span>
+      <input
+        value={value}
+        onChange={(e) => setValue(e.target.value.replace(/[^0-9]/g, ""))}
+        onFocus={(e) => { setEditing(true); e.target.select(); }}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") { setValue(String(current + 1)); e.currentTarget.blur(); }
+        }}
+        aria-label="Jump to spread"
+        className="w-10 rounded-md bg-white/5 border border-white/10 px-1 py-0.5 text-center text-white/70 focus:outline-none focus:border-white/30 transition-colors"
+      />
+      <span>/ {total}</span>
+    </span>
   );
 }
