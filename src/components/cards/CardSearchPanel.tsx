@@ -134,6 +134,88 @@ function SetPicker({
   );
 }
 
+// Compact single-select dropdown for short option lists (types, rarities).
+// Keeps the long option list inside a scrollable popover instead of a pill wall.
+function FilterMenu({
+  allLabel,
+  value,
+  options,
+  onChange,
+  active = "primary",
+  className,
+}: {
+  allLabel: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+  active?: "primary" | "accent";
+  className?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  const selectedTrigger =
+    active === "accent"
+      ? "border-accent bg-accent-soft text-accent-foreground"
+      : "border-primary bg-primary-soft text-primary";
+
+  return (
+    <div ref={ref} className={cn("relative", className)}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          "flex w-full cursor-pointer items-center justify-between rounded-lg border px-2.5 py-2 text-xs font-medium transition-colors",
+          value ? selectedTrigger : "border-border bg-surface text-muted hover:border-border-strong hover:text-foreground"
+        )}
+      >
+        <span className="truncate">{value || allLabel}</span>
+        <ChevronDown className={cn("ml-1.5 h-3.5 w-3.5 flex-shrink-0 transition-transform", open && "rotate-180")} />
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-60 overflow-y-auto rounded-xl border border-border bg-surface py-1 shadow-lg">
+          <button
+            onClick={() => {
+              onChange("");
+              setOpen(false);
+            }}
+            className={cn(
+              "w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-surface-muted",
+              !value ? "font-semibold text-foreground" : "text-muted"
+            )}
+          >
+            {allLabel}
+          </button>
+          {options.map((opt) => (
+            <button
+              key={opt}
+              onClick={() => {
+                onChange(opt);
+                setOpen(false);
+              }}
+              className={cn(
+                "w-full truncate px-3 py-1.5 text-left text-xs transition-colors hover:bg-surface-muted",
+                value === opt ? "font-semibold text-primary" : "text-muted"
+              )}
+            >
+              {opt}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function CardSearchPanel() {
   const {
     query, setQuery, fetchResults, loadMore, results, isLoading, totalCount, hasMore,
@@ -219,8 +301,9 @@ export function CardSearchPanel() {
     trigger(100);
   }
 
-  function toggleType(type: string) {
-    setSelectedTypes(selectedTypes.includes(type) ? selectedTypes.filter((t) => t !== type) : [type]);
+  function selectType(type: string) {
+    // Empty string clears the type filter; otherwise single-select.
+    setSelectedTypes(type ? [type] : []);
     trigger(100);
   }
 
@@ -310,28 +393,6 @@ export function CardSearchPanel() {
         </div>
       </div>
 
-      {/* Pokémon type filters — only when browsing Pokémon in English (type names are English) */}
-      {onlyPokemon && language === "en" && (
-        <div className="flex-shrink-0 px-3 pb-2">
-          <div className="flex flex-wrap gap-1">
-            {POKEMON_TYPES.map((type) => (
-              <button
-                key={type}
-                onClick={() => toggleType(type)}
-                className={cn(
-                  "cursor-pointer rounded-md border px-2 py-0.5 text-xs transition-colors",
-                  selectedTypes.includes(type)
-                    ? "border-primary bg-primary-soft text-primary"
-                    : "border-transparent bg-surface-muted text-muted hover:text-foreground"
-                )}
-              >
-                {type}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Set filter */}
       {sets.length > 0 && (
         <div className="flex-shrink-0 px-3 pb-2">
@@ -352,25 +413,28 @@ export function CardSearchPanel() {
         </div>
       )}
 
-      {/* Rarity filter — disabled while browsing a single set (set view shows the whole set) */}
-      {rarities.length > 0 && !selectedSetId && (
-        <div className="flex-shrink-0 px-3 pb-2">
-          <div className="flex flex-wrap gap-1">
-            {rarities.map((r) => (
-              <button
-                key={r}
-                onClick={() => handleRarityChange(rarity === r ? "" : r)}
-                className={cn(
-                  "cursor-pointer rounded-md border px-2 py-0.5 text-[10px] transition-colors",
-                  rarity === r
-                    ? "border-accent bg-accent-soft text-accent-foreground"
-                    : "border-transparent bg-surface-muted text-muted hover:text-foreground"
-                )}
-              >
-                {r}
-              </button>
-            ))}
-          </div>
+      {/* Type + rarity filters as compact dropdowns (rarity hidden while a set is selected) */}
+      {((onlyPokemon && language === "en") || (rarities.length > 0 && !selectedSetId)) && (
+        <div className="flex flex-shrink-0 gap-1.5 px-3 pb-2">
+          {onlyPokemon && language === "en" && (
+            <FilterMenu
+              className="flex-1"
+              allLabel="All types"
+              value={selectedTypes[0] ?? ""}
+              options={POKEMON_TYPES}
+              onChange={selectType}
+            />
+          )}
+          {rarities.length > 0 && !selectedSetId && (
+            <FilterMenu
+              className="flex-1"
+              allLabel="All rarities"
+              value={rarity}
+              options={rarities}
+              onChange={handleRarityChange}
+              active="accent"
+            />
+          )}
         </div>
       )}
 
