@@ -3,12 +3,13 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSession } from "next-auth/react";
-import { signOut } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Menu, ArrowLeft, Share2, Check, PanelRight, LogOut, Loader2 } from "lucide-react";
 import type { BinderWithPages } from "@/types/binder";
 import { useUIStore } from "@/store/uiStore";
 import { useBinderStore } from "@/store/binderStore";
+import { IconButton } from "@/components/ui/IconButton";
 
 interface Props {
   binder: BinderWithPages;
@@ -62,34 +63,29 @@ export function TopNav({ binder, isDirty, isSaving }: Props) {
 
   function onNameKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter") nameRef.current?.blur();
-    if (e.key === "Escape") { setNameValue(binder.name); setIsEditingName(false); }
+    if (e.key === "Escape") {
+      setNameValue(binder.name);
+      setIsEditingName(false);
+    }
   }
 
   return (
-    <header className="flex items-center justify-between px-3 py-2.5 border-b border-white/5 flex-shrink-0">
+    <header className="flex flex-shrink-0 items-center justify-between border-b border-border bg-surface px-3 py-2.5">
       {/* Left: menu toggle + back + name */}
-      <div className="flex items-center gap-2 min-w-0">
-        <button
-          onClick={toggleLeft}
-          aria-label="Toggle card search"
-          className="rounded-lg p-1.5 text-white/40 hover:text-white hover:bg-white/5 transition-colors flex-shrink-0"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
-        </button>
+      <div className="flex min-w-0 items-center gap-1.5">
+        <IconButton aria-label="Toggle card library" size="sm" onClick={toggleLeft}>
+          <Menu className="h-4 w-4" />
+        </IconButton>
 
         <Link
           href="/dashboard"
-          className="rounded-lg p-1.5 text-white/40 hover:text-white hover:bg-white/5 transition-colors flex-shrink-0"
           aria-label="Back to dashboard"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
         >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
+          <ArrowLeft className="h-4 w-4" />
         </Link>
 
-        <div className="w-px h-4 bg-white/10 flex-shrink-0" />
+        <div className="mx-1 h-5 w-px flex-shrink-0 bg-border" />
 
         {/* Inline name editor */}
         {isEditingName ? (
@@ -100,12 +96,15 @@ export function TopNav({ binder, isDirty, isSaving }: Props) {
             onChange={(e) => setNameValue(e.target.value)}
             onBlur={saveName}
             onKeyDown={onNameKeyDown}
-            className="bg-white/8 border border-white/20 rounded-lg px-2 py-0.5 text-sm font-medium text-white focus:outline-none w-48 min-w-0"
+            className="w-48 min-w-0 rounded-lg border border-primary bg-surface px-2 py-1 text-sm font-semibold text-foreground focus:outline-none focus:ring-4 focus:ring-primary/15"
           />
         ) : (
           <button
-            onClick={() => { setIsEditingName(true); setNameValue(binder.name); }}
-            className="text-sm font-medium text-white hover:text-white/80 transition-colors truncate max-w-[180px] text-left"
+            onClick={() => {
+              setIsEditingName(true);
+              setNameValue(binder.name);
+            }}
+            className="max-w-[180px] cursor-pointer truncate rounded-lg px-2 py-1 text-left text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted"
             title="Click to rename"
           >
             {binder.name}
@@ -117,51 +116,32 @@ export function TopNav({ binder, isDirty, isSaving }: Props) {
       <div className="flex items-center gap-2">
         <button
           onClick={handleShare}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs text-white/50 hover:text-white hover:border-white/25 transition-colors"
+          className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1.5 text-xs font-medium text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
         >
-          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-          </svg>
+          {shareLabel === "Copied!" ? (
+            <Check className="h-3.5 w-3.5 text-success" />
+          ) : (
+            <Share2 className="h-3.5 w-3.5" />
+          )}
           {shareLabel}
         </button>
 
-        {isSaving ? (
-          <span className="text-xs text-white/30 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-white/30 animate-pulse" />
-            Saving…
-          </span>
-        ) : isDirty ? (
-          <span className="text-xs text-white/30 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400/60" />
-            Unsaved
-          </span>
-        ) : (
-          <span className="text-xs text-white/20 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/50" />
-            Saved
-          </span>
-        )}
+        <SaveStatus isSaving={isSaving} isDirty={isDirty} />
 
         {/* User avatar dropdown */}
         {session?.user && (
           <div className="relative">
             <button
               onClick={() => setAvatarOpen((v) => !v)}
-              className="rounded-full overflow-hidden w-7 h-7 border border-white/10 hover:border-white/30 transition-colors flex-shrink-0"
-              aria-label="User menu"
+              className="h-7 w-7 flex-shrink-0 cursor-pointer overflow-hidden rounded-full border border-border transition-colors hover:border-border-strong"
+              aria-label="Account menu"
             >
               {session.user.image ? (
-                <Image
-                  src={session.user.image}
-                  alt={session.user.name ?? ""}
-                  width={28}
-                  height={28}
-                  className="object-cover"
-                />
+                <Image src={session.user.image} alt={session.user.name ?? ""} width={28} height={28} className="object-cover" />
               ) : (
-                <div className="w-full h-full bg-white/10 flex items-center justify-center text-xs text-white/60">
+                <span className="flex h-full w-full items-center justify-center bg-primary-soft text-xs font-bold text-primary">
                   {(session.user.name ?? "?")[0].toUpperCase()}
-                </div>
+                </span>
               )}
             </button>
 
@@ -174,23 +154,25 @@ export function TopNav({ binder, isDirty, isSaving }: Props) {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.95, y: -4 }}
                     transition={{ duration: 0.12 }}
-                    className="absolute right-0 top-full mt-2 z-50 glass rounded-xl p-1 w-44 shadow-xl"
+                    className="absolute right-0 top-full z-50 mt-2 w-52 overflow-hidden rounded-xl border border-border bg-surface shadow-lg"
                   >
-                    <div className="px-3 py-2 border-b border-white/5 mb-1">
-                      <p className="text-xs text-white/80 font-medium truncate">{session.user.name}</p>
-                      <p className="text-xs text-white/35 truncate">{session.user.email}</p>
+                    <div className="border-b border-border px-4 py-3">
+                      <p className="truncate text-sm font-semibold text-foreground">{session.user.name}</p>
+                      <p className="truncate text-xs text-muted">{session.user.email}</p>
                     </div>
                     <Link
                       href="/dashboard"
                       onClick={() => setAvatarOpen(false)}
-                      className="flex items-center gap-2 px-3 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
                     >
+                      <ArrowLeft className="h-4 w-4" />
                       Dashboard
                     </Link>
                     <button
                       onClick={() => signOut({ callbackUrl: "/login" })}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-white/60 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                      className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-sm text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
                     >
+                      <LogOut className="h-4 w-4" />
                       Sign out
                     </button>
                   </motion.div>
@@ -200,16 +182,35 @@ export function TopNav({ binder, isDirty, isSaving }: Props) {
           </div>
         )}
 
-        <button
-          onClick={toggleRight}
-          aria-label="Toggle page navigator"
-          className="rounded-lg p-1.5 text-white/40 hover:text-white hover:bg-white/5 transition-colors flex-shrink-0"
-        >
-          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-          </svg>
-        </button>
+        <IconButton aria-label="Toggle page navigator" size="sm" onClick={toggleRight}>
+          <PanelRight className="h-4 w-4" />
+        </IconButton>
       </div>
     </header>
+  );
+}
+
+function SaveStatus({ isSaving, isDirty }: { isSaving: boolean; isDirty: boolean }) {
+  if (isSaving) {
+    return (
+      <span className="hidden items-center gap-1.5 text-xs text-muted sm:flex">
+        <Loader2 className="h-3 w-3 animate-spin" />
+        Saving…
+      </span>
+    );
+  }
+  if (isDirty) {
+    return (
+      <span className="hidden items-center gap-1.5 text-xs text-muted sm:flex">
+        <span className="h-1.5 w-1.5 rounded-full bg-warning" />
+        Unsaved
+      </span>
+    );
+  }
+  return (
+    <span className="hidden items-center gap-1.5 text-xs text-subtle sm:flex">
+      <span className="h-1.5 w-1.5 rounded-full bg-success" />
+      Saved
+    </span>
   );
 }

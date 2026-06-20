@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import type { BinderLayout } from "@/types/binder";
+import { Modal } from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { Field, ColorSwatches } from "./binderForm";
+import { COVER_COLORS } from "@/lib/binderCovers";
+import { cn } from "@/lib/utils";
 
 const LAYOUTS: { value: BinderLayout; label: string; cols: number; rows: number }[] = [
   { value: "FOUR_POCKET", label: "4-pocket", cols: 2, rows: 2 },
   { value: "NINE_POCKET", label: "9-pocket", cols: 3, rows: 3 },
   { value: "TWELVE_POCKET", label: "12-pocket", cols: 4, rows: 3 },
-];
-
-const COVER_COLORS = [
-  "#1a1a2e", "#16213e", "#0f3460", "#1b4332",
-  "#3d0c02", "#2d1b69", "#1a0533", "#212121",
 ];
 
 interface Props {
@@ -28,138 +28,112 @@ export function CreateBinderModal({ open, onClose, onCreate, isLoading }: Props)
   const [pageCount, setPageCount] = useState(20);
   const [coverColor, setCoverColor] = useState(COVER_COLORS[0]);
 
+  function reset() {
+    setName("");
+    setLayout("NINE_POCKET");
+    setPageCount(20);
+    setCoverColor(COVER_COLORS[0]);
+  }
+
+  function handleClose() {
+    reset();
+    onClose();
+  }
+
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim()) return;
     onCreate({ name: name.trim(), pocketLayout: layout, pageCount, coverColor });
   }
 
-  function handleClose() {
-    setName("");
-    setLayout("NINE_POCKET");
-    setPageCount(20);
-    setCoverColor(COVER_COLORS[0]);
-    onClose();
-  }
-
   return (
-    <AnimatePresence>
-      {open && (
+    <Modal
+      open={open}
+      onClose={handleClose}
+      title="New binder"
+      description="Set up a binder to start collecting."
+      size="md"
+      footer={
         <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm"
-            onClick={handleClose}
-          />
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 16 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className="glass rounded-2xl w-full max-w-md p-6 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h2 className="text-lg font-semibold text-white mb-5">New Binder</h2>
-
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                  <label className="block text-xs text-white/50 mb-1.5">Name</label>
-                  <input
-                    autoFocus
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="My Collection"
-                    className="w-full rounded-xl bg-white/5 border border-white/10 px-4 py-2.5 text-white placeholder:text-white/25 focus:outline-none focus:border-white/30 text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs text-white/50 mb-2">Pocket Layout</label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {LAYOUTS.map((l) => (
-                      <button
-                        key={l.value}
-                        type="button"
-                        onClick={() => setLayout(l.value)}
-                        className={`rounded-xl border p-3 transition-all ${
-                          layout === l.value
-                            ? "border-white/40 bg-white/10"
-                            : "border-white/10 hover:border-white/20"
-                        }`}
-                      >
-                        <div
-                          className="grid gap-0.5 mb-2"
-                          style={{ gridTemplateColumns: `repeat(${l.cols}, 1fr)` }}
-                        >
-                          {Array.from({ length: l.cols * l.rows }).map((_, i) => (
-                            <div key={i} className="aspect-[2.5/3.5] rounded-sm bg-white/20" />
-                          ))}
-                        </div>
-                        <p className="text-xs text-white/60 text-center">{l.label}</p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-white/50 mb-1.5">
-                    Pages — <span className="text-white/70">{pageCount}</span>
-                  </label>
-                  <input
-                    type="range"
-                    min={4}
-                    max={100}
-                    step={2}
-                    value={pageCount}
-                    onChange={(e) => setPageCount(Number(e.target.value))}
-                    className="w-full accent-white/60"
-                  />
-                  <div className="flex justify-between text-xs text-white/25 mt-1">
-                    <span>4</span><span>100</span>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs text-white/50 mb-2">Cover Color</label>
-                  <div className="flex gap-2 flex-wrap">
-                    {COVER_COLORS.map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setCoverColor(c)}
-                        className={`w-8 h-8 rounded-full border-2 transition-all ${
-                          coverColor === c ? "border-white scale-110" : "border-transparent hover:border-white/40"
-                        }`}
-                        style={{ background: c }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex gap-2 pt-1">
-                  <button
-                    type="button"
-                    onClick={handleClose}
-                    className="flex-1 rounded-xl border border-white/10 py-2.5 text-sm text-white/60 hover:text-white hover:border-white/20 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!name.trim() || isLoading}
-                    className="flex-1 rounded-xl bg-white py-2.5 text-sm font-medium text-gray-900 hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isLoading ? "Creating…" : "Create"}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
+          <Button variant="secondary" onClick={handleClose}>
+            Cancel
+          </Button>
+          <Button type="submit" form="create-binder-form" loading={isLoading} disabled={!name.trim()}>
+            Create binder
+          </Button>
         </>
-      )}
-    </AnimatePresence>
+      }
+    >
+      <form id="create-binder-form" onSubmit={handleSubmit} className="space-y-5">
+        <Field label="Name">
+          <Input
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="e.g. Scarlet & Violet Masters"
+          />
+        </Field>
+
+        <Field label="Pocket layout">
+          <div className="grid grid-cols-3 gap-2">
+            {LAYOUTS.map((l) => (
+              <button
+                key={l.value}
+                type="button"
+                onClick={() => setLayout(l.value)}
+                aria-pressed={layout === l.value}
+                className={cn(
+                  "cursor-pointer rounded-xl border p-3 transition-colors",
+                  layout === l.value
+                    ? "border-primary bg-primary-soft"
+                    : "border-border hover:border-border-strong hover:bg-surface-muted"
+                )}
+              >
+                <div className="mx-auto grid w-12 gap-0.5" style={{ gridTemplateColumns: `repeat(${l.cols}, 1fr)` }}>
+                  {Array.from({ length: l.cols * l.rows }).map((_, i) => (
+                    <div
+                      key={i}
+                      className={cn(
+                        "aspect-[2.5/3.5] rounded-[2px]",
+                        layout === l.value ? "bg-primary/30" : "bg-border-strong"
+                      )}
+                    />
+                  ))}
+                </div>
+                <p className={cn("mt-2 text-center text-xs font-medium", layout === l.value ? "text-primary" : "text-muted")}>
+                  {l.label}
+                </p>
+              </button>
+            ))}
+          </div>
+        </Field>
+
+        <Field
+          label={
+            <span>
+              Pages — <span className="text-foreground">{pageCount}</span>
+            </span>
+          }
+        >
+          <input
+            type="range"
+            min={4}
+            max={100}
+            step={2}
+            value={pageCount}
+            onChange={(e) => setPageCount(Number(e.target.value))}
+            className="w-full cursor-pointer accent-primary"
+          />
+          <div className="mt-1 flex justify-between text-xs text-subtle">
+            <span>4</span>
+            <span>100</span>
+          </div>
+        </Field>
+
+        <Field label="Cover color">
+          <ColorSwatches value={coverColor} onChange={setCoverColor} colors={COVER_COLORS} />
+        </Field>
+      </form>
+    </Modal>
   );
 }

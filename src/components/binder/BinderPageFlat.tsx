@@ -19,9 +19,9 @@ function SinglePage({ page, layout, pageNumber, onZoom, onRemove }: PageProps) {
   const rows = getGridRows(layout);
 
   return (
-    <div className="flex-1 flex flex-col bg-[#12182b] rounded-2xl border border-white/5 shadow-xl min-w-0 min-h-0 overflow-hidden">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-surface shadow-sm">
       <div
-        className="flex-1 grid gap-2 p-3 min-h-0"
+        className="grid min-h-0 flex-1 gap-2 p-3"
         style={{
           gridTemplateColumns: `repeat(${cols}, 1fr)`,
           gridTemplateRows: `repeat(${rows}, 1fr)`,
@@ -43,7 +43,7 @@ function SinglePage({ page, layout, pageNumber, onZoom, onRemove }: PageProps) {
         })}
       </div>
       {pageNumber != null && (
-        <p className="text-center text-[10px] text-white/20 py-1.5 flex-shrink-0 tabular-nums select-none">
+        <p className="flex-shrink-0 select-none py-1.5 text-center text-[10px] tabular-nums text-subtle">
           {pageNumber}
         </p>
       )}
@@ -74,27 +74,18 @@ export function BinderPageFlat({ leftPage, rightPage, layout, spreadIndex, pageC
 
   return (
     // Centering wrapper — fills the flex parent, centers the constrained spread
-    <div className="flex-1 min-h-0 flex justify-center">
+    <div className="flex min-h-0 flex-1 justify-center">
       {/* Spread — height fills container, width derived from aspect ratio */}
-      <div
-        className="h-full min-h-0 max-w-full flex gap-2"
-        style={{ aspectRatio: String(spreadAR) }}
-      >
+      <div className="flex h-full min-h-0 max-w-full gap-2" style={{ aspectRatio: String(spreadAR) }}>
         {leftPage ? (
-          <SinglePage
-            page={leftPage}
-            layout={layout}
-            pageNumber={leftNum}
-            onZoom={onZoom}
-            onRemove={onRemove}
-          />
+          <SinglePage page={leftPage} layout={layout} pageNumber={leftNum} onZoom={onZoom} onRemove={onRemove} />
         ) : (
-          <div className="flex-1 rounded-2xl bg-[#0d1220] border border-white/5" />
+          <div className="flex-1 rounded-2xl border border-border bg-surface-muted" />
         )}
 
         {/* Spine divider */}
-        <div className="w-3 flex-shrink-0 flex items-stretch justify-center py-6">
-          <div className="w-px bg-white/5 rounded-full" />
+        <div className="flex w-3 flex-shrink-0 items-stretch justify-center py-6">
+          <div className="w-px rounded-full bg-border-strong" />
         </div>
 
         {rightPage && rightVisible ? (
@@ -106,7 +97,7 @@ export function BinderPageFlat({ leftPage, rightPage, layout, spreadIndex, pageC
             onRemove={onRemove}
           />
         ) : (
-          <div className="flex-1 rounded-2xl bg-[#0d1220] border border-white/5" />
+          <div className="flex-1 rounded-2xl border border-border bg-surface-muted" />
         )}
       </div>
     </div>

@@ -3,8 +3,10 @@
 import { useEffect, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import Image from "next/image";
+import { Check } from "lucide-react";
 import type { PokeTCGCard } from "@/types/pokemontcg";
 import type { DragItem } from "@/types/dnd";
+import { cn } from "@/lib/utils";
 
 interface Props {
   card: PokeTCGCard;
@@ -33,7 +35,10 @@ export function CardThumbnail({ card, onZoom, isOwned }: Props) {
   }, [isDragging]);
 
   function handleClick() {
-    if (wasDragging.current) { wasDragging.current = false; return; }
+    if (wasDragging.current) {
+      wasDragging.current = false;
+      return;
+    }
     onZoom?.(card.id, card.name, card.images.small);
   }
 
@@ -43,9 +48,11 @@ export function CardThumbnail({ card, onZoom, isOwned }: Props) {
       {...listeners}
       {...attributes}
       onClick={handleClick}
-      className={`group relative aspect-[2.5/3.5] cursor-grab active:cursor-grabbing rounded-lg overflow-hidden transition-all duration-200 hover:scale-[1.08] hover:-translate-y-0.5 hover:z-10 hover:shadow-[0_8px_24px_rgba(0,0,0,0.6)] hover:ring-1 hover:ring-white/20 ${
-        isDragging ? "opacity-30 scale-95" : ""
-      }`}
+      className={cn(
+        "group relative aspect-[2.5/3.5] cursor-grab overflow-hidden rounded-lg bg-surface-muted transition-all duration-200 active:cursor-grabbing",
+        "hover:z-10 hover:-translate-y-0.5 hover:scale-[1.08] hover:shadow-lg hover:ring-2 hover:ring-primary/40",
+        isDragging && "scale-95 opacity-30"
+      )}
     >
       {card.images.small ? (
         <Image
@@ -53,26 +60,26 @@ export function CardThumbnail({ card, onZoom, isOwned }: Props) {
           alt={card.name}
           fill
           sizes="100px"
-          className="object-cover select-none"
+          className="select-none object-cover"
           draggable={false}
         />
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-white/5 p-1.5 text-center">
-          <span className="text-[9px] leading-tight text-white/40">{card.name}</span>
+        <div className="absolute inset-0 flex items-center justify-center p-1.5 text-center">
+          <span className="text-[9px] leading-tight text-muted">{card.name}</span>
         </div>
       )}
+
       {/* Owned badge */}
       {isOwned && (
-        <div className="absolute top-1 left-1 z-10 rounded-full bg-green-500/90 p-0.5 shadow-md">
-          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
+        <div className="absolute left-1 top-1 z-10 rounded-full bg-success p-0.5 shadow-md">
+          <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
         </div>
       )}
+
       {/* Name + set on hover */}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none flex flex-col justify-end p-1.5 gap-0.5">
-        <p className="text-white text-[9px] font-semibold leading-tight truncate">{card.name}</p>
-        <p className="text-white/55 text-[8px] leading-tight truncate">{card.set.name}</p>
+      <div className="pointer-events-none absolute inset-0 flex flex-col justify-end gap-0.5 bg-gradient-to-t from-black/85 via-black/20 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <p className="truncate text-[9px] font-semibold leading-tight text-white">{card.name}</p>
+        <p className="truncate text-[8px] leading-tight text-white/60">{card.set.name}</p>
       </div>
     </div>
   );

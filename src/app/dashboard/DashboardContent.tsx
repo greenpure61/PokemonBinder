@@ -2,140 +2,129 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import Image from "next/image";
-import Link from "next/link";
-import { signOut } from "next-auth/react";
-import { useBinders, useCreateBinder, useDeleteBinder, useUpdateBinderById, type BinderListItem } from "@/hooks/useBinderData";
+import { Plus, LibraryBig } from "lucide-react";
+import {
+  useBinders,
+  useCreateBinder,
+  useDeleteBinder,
+  useUpdateBinderById,
+  type BinderListItem,
+} from "@/hooks/useBinderData";
+import { AppHeader } from "@/components/layout/AppHeader";
 import { BinderCard } from "@/components/dashboard/BinderCard";
 import { CreateBinderModal } from "@/components/dashboard/CreateBinderModal";
 import { EditBinderModal } from "@/components/dashboard/EditBinderModal";
+import { Button } from "@/components/ui/Button";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 import type { BinderLayout } from "@/types/binder";
-
-interface Props {
-  user: { id: string; name?: string | null; email?: string | null; image?: string | null };
-}
 
 const container = {
   hidden: {},
-  show: { transition: { staggerChildren: 0.06 } },
+  show: { transition: { staggerChildren: 0.05 } },
 };
 const item = {
   hidden: { opacity: 0, y: 16 },
   show: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 300, damping: 28 } },
 };
 
-export function DashboardContent({ user }: Props) {
+export function DashboardContent() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<BinderListItem | null>(null);
+  const [deleting, setDeleting] = useState<BinderListItem | null>(null);
   const { data: binders, isLoading } = useBinders();
   const createBinder = useCreateBinder();
   const deleteBinder = useDeleteBinder();
   const updateBinder = useUpdateBinderById();
+  const { toast } = useToast();
 
   async function handleCreate(data: { name: string; pocketLayout: BinderLayout; pageCount: number; coverColor: string }) {
-    await createBinder.mutateAsync(data);
-    setModalOpen(false);
+    try {
+      await createBinder.mutateAsync(data);
+      setModalOpen(false);
+      toast("Binder created", "success");
+    } catch {
+      toast("Couldn't create binder", "error");
+    }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this binder? This cannot be undone.")) return;
-    await deleteBinder.mutateAsync(id);
+  async function confirmDelete() {
+    if (!deleting) return;
+    try {
+      await deleteBinder.mutateAsync(deleting.id);
+      toast("Binder deleted", "success");
+    } catch {
+      toast("Couldn't delete binder", "error");
+    }
+    setDeleting(null);
   }
 
   async function handleEditSave(binderId: string, data: { name: string; coverColor: string }) {
-    await updateBinder.mutateAsync({ binderId, data });
-    setEditing(null);
+    try {
+      await updateBinder.mutateAsync({ binderId, data });
+      setEditing(null);
+      toast("Changes saved", "success");
+    } catch {
+      toast("Couldn't save changes", "error");
+    }
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a]">
-      {/* Top nav */}
-      <header className="sticky top-0 z-30 border-b border-white/5 bg-[#0a0e1a]/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xl">🎴</span>
-            <span className="font-semibold text-white">PokemonBinder</span>
-          </div>
-          <div className="flex items-center gap-3">
-            {user.image && (
-              <Image src={user.image} alt="" width={32} height={32} className="rounded-full" />
-            )}
-            <span className="text-sm text-white/60">{user.name ?? user.email}</span>
-            <button
-              onClick={() => signOut({ callbackUrl: "/login" })}
-              className="rounded-lg px-3 py-1.5 text-xs text-white/40 hover:text-white/70 hover:bg-white/5 transition-colors"
-            >
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background">
+      <AppHeader />
 
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        <div className="mb-8 flex items-center justify-between">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-white">My Binders</h1>
-            <p className="text-sm text-white/40 mt-1">
-              {binders ? `${binders.length} binder${binders.length !== 1 ? "s" : ""}` : ""}
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">My binders</h1>
+            <p className="mt-1 text-sm text-muted">
+              {binders
+                ? `${binders.length} binder${binders.length !== 1 ? "s" : ""} in your collection`
+                : "Loading your collection…"}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/dashboard/stats"
-              className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/60 hover:text-white hover:border-white/25 transition-colors"
-            >
-              Stats
-            </Link>
-            <Link
-              href="/dashboard/wishlist"
-              className="rounded-xl border border-white/10 px-3 py-2 text-sm text-white/60 hover:text-white hover:border-white/25 transition-colors"
-            >
-              ⭐ Wishlist
-            </Link>
-            <button
-              onClick={() => setModalOpen(true)}
-              className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-medium text-gray-900 hover:bg-white/90 transition-colors"
-            >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              New Binder
-            </button>
-          </div>
+          <Button onClick={() => setModalOpen(true)} className="flex-shrink-0">
+            <Plus className="h-4 w-4" />
+            New binder
+          </Button>
         </div>
 
         {isLoading ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="aspect-[3/4] rounded-2xl bg-white/5 animate-pulse" />
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="overflow-hidden rounded-2xl border border-border bg-surface">
+                <Skeleton className="aspect-[4/3] rounded-none" />
+                <div className="space-y-2 p-4">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
             ))}
           </div>
         ) : binders?.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-24 text-center"
-          >
-            <div className="text-5xl mb-4">📚</div>
-            <h2 className="text-lg font-medium text-white/70">No binders yet</h2>
-            <p className="text-sm text-white/30 mt-1 mb-6">Create your first binder to get started</p>
-            <button
-              onClick={() => setModalOpen(true)}
-              className="rounded-xl bg-white/10 border border-white/10 px-5 py-2.5 text-sm text-white hover:bg-white/15 transition-colors"
-            >
-              Create a binder
-            </button>
-          </motion.div>
+          <EmptyState
+            icon={<LibraryBig className="h-7 w-7" />}
+            title="No binders yet"
+            description="Create your first binder to start building and organizing your Pokémon card collection."
+            action={
+              <Button onClick={() => setModalOpen(true)}>
+                <Plus className="h-4 w-4" />
+                Create a binder
+              </Button>
+            }
+          />
         ) : (
           <motion.div
             variants={container}
             initial="hidden"
             animate="show"
-            className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4"
+            className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4"
           >
             {binders?.map((binder) => (
               <motion.div key={binder.id} variants={item}>
-                <BinderCard binder={binder} onDelete={handleDelete} onEdit={setEditing} />
+                <BinderCard binder={binder} onDelete={setDeleting} onEdit={setEditing} />
               </motion.div>
             ))}
           </motion.div>
@@ -154,6 +143,21 @@ export function DashboardContent({ user }: Props) {
         onClose={() => setEditing(null)}
         onSave={handleEditSave}
         isLoading={updateBinder.isPending}
+      />
+
+      <ConfirmDialog
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={confirmDelete}
+        title="Delete binder?"
+        description={
+          deleting
+            ? `"${deleting.name}" and all of its pages will be permanently removed. This can't be undone.`
+            : undefined
+        }
+        confirmLabel="Delete"
+        destructive
+        loading={deleteBinder.isPending}
       />
     </div>
   );

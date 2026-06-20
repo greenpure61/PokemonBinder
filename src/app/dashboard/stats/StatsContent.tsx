@@ -2,15 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
+import { Layers, LibraryBig, Percent, Boxes, ChevronRight } from "lucide-react";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { Card } from "@/components/ui/Card";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface StatsData {
   totalCards: number;
@@ -32,18 +29,34 @@ const SLOTS_PER_PAGE: Record<string, number> = {
 };
 
 const BAR_COLORS = [
-  "#818cf8", "#a78bfa", "#c084fc", "#e879f9",
-  "#f472b6", "#fb7185", "#fb923c", "#fbbf24",
-  "#a3e635", "#34d399",
+  "#2563eb", "#3b82f6", "#60a5fa", "#0891b2", "#0e7490",
+  "#f5b91e", "#f59e0b", "#16a34a", "#22c55e", "#8b5cf6",
 ];
 
-function StatCard({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  icon,
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  icon: React.ReactNode;
+}) {
   return (
-    <div className="glass rounded-2xl p-5">
-      <p className="text-xs text-white/40 mb-1">{label}</p>
-      <p className="text-2xl font-bold text-white">{value}</p>
-      {sub && <p className="text-xs text-white/30 mt-0.5">{sub}</p>}
-    </div>
+    <Card className="p-5">
+      <div className="flex items-center gap-3">
+        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-muted">{label}</p>
+          <p className="text-2xl font-extrabold leading-tight text-foreground">{value}</p>
+        </div>
+      </div>
+      {sub && <p className="mt-2 text-xs text-subtle">{sub}</p>}
+    </Card>
   );
 }
 
@@ -58,104 +71,113 @@ export function StatsContent() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0a0e1a] flex items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-white/60" />
-      </div>
-    );
-  }
-
-  const totalSlots = data?.binders.reduce(
-    (sum, b) => sum + b.pageCount * (SLOTS_PER_PAGE[b.pocketLayout] ?? 9),
-    0
-  ) ?? 0;
+  const totalSlots =
+    data?.binders.reduce((sum, b) => sum + b.pageCount * (SLOTS_PER_PAGE[b.pocketLayout] ?? 9), 0) ?? 0;
   const fillPct = totalSlots > 0 ? Math.round(((data?.totalCards ?? 0) / totalSlots) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a]">
-      <header className="sticky top-0 z-30 border-b border-white/5 bg-[#0a0e1a]/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-4">
-          <Link href="/dashboard" className="text-white/40 hover:text-white transition-colors">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <h1 className="font-semibold text-white">Collection Stats</h1>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background">
+      <AppHeader />
 
-      <main className="mx-auto max-w-5xl px-6 py-10 space-y-8">
-        {/* Summary cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <StatCard label="Total Cards" value={data?.totalCards ?? 0} />
-          <StatCard label="Total Binders" value={data?.totalBinders ?? 0} />
-          <StatCard label="Slots Filled" value={`${fillPct}%`} sub={`${data?.totalCards ?? 0} / ${totalSlots}`} />
-          <StatCard label="Unique Sets" value={data?.bySet.length ?? 0} />
+      <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 sm:py-10">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Collection stats</h1>
+          <p className="mt-1 text-sm text-muted">An overview of everything across your binders.</p>
         </div>
 
-        {/* Top sets chart */}
-        {(data?.bySet.length ?? 0) > 0 && (
-          <div className="glass rounded-2xl p-6">
-            <h2 className="text-sm font-medium text-white mb-6">Cards by Set (top {data!.bySet.length})</h2>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart
-                data={data!.bySet}
-                layout="vertical"
-                margin={{ top: 0, right: 16, left: 0, bottom: 0 }}
-              >
-                <XAxis type="number" tick={{ fill: "rgba(255,255,255,0.3)", fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis
-                  type="category"
-                  dataKey="set"
-                  width={120}
-                  tick={{ fill: "rgba(255,255,255,0.5)", fontSize: 11 }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  cursor={{ fill: "rgba(255,255,255,0.04)" }}
-                  contentStyle={{ background: "#0f1628", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 8, fontSize: 12 }}
-                  labelStyle={{ color: "rgba(255,255,255,0.7)" }}
-                  itemStyle={{ color: "rgba(255,255,255,0.5)" }}
-                />
-                <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                  {data!.bySet.map((_, i) => (
-                    <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Per-binder fill rates */}
-        {(data?.binders.length ?? 0) > 0 && (
-          <div className="glass rounded-2xl p-6">
-            <h2 className="text-sm font-medium text-white mb-4">Binders</h2>
-            <div className="space-y-3">
-              {data!.binders.map((b) => {
-                const slots = b.pageCount * (SLOTS_PER_PAGE[b.pocketLayout] ?? 9);
-                return (
-                  <Link
-                    key={b.id}
-                    href={`/binder/${b.id}`}
-                    className="flex items-center gap-3 hover:bg-white/3 rounded-xl p-2 -mx-2 transition-colors"
-                  >
-                    <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: b.coverColor }} />
-                    <span className="text-sm text-white/70 flex-1 truncate">{b.name}</span>
-                    <span className="text-xs text-white/30 tabular-nums">{slots} slots</span>
-                  </Link>
-                );
-              })}
+        {loading ? (
+          <>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-24 rounded-2xl" />
+              ))}
             </div>
-          </div>
-        )}
+            <Skeleton className="h-80 rounded-2xl" />
+          </>
+        ) : (
+          <>
+            {/* Summary cards */}
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <StatCard label="Total cards" value={data?.totalCards ?? 0} icon={<Layers className="h-5 w-5" />} />
+              <StatCard label="Total binders" value={data?.totalBinders ?? 0} icon={<LibraryBig className="h-5 w-5" />} />
+              <StatCard
+                label="Slots filled"
+                value={`${fillPct}%`}
+                sub={`${data?.totalCards ?? 0} / ${totalSlots}`}
+                icon={<Percent className="h-5 w-5" />}
+              />
+              <StatCard label="Unique sets" value={data?.bySet.length ?? 0} icon={<Boxes className="h-5 w-5" />} />
+            </div>
 
-        {data?.totalCards === 0 && (
-          <div className="text-center py-16 text-white/30 text-sm">
-            Add cards to your binders to see stats here.
-          </div>
+            {/* Top sets chart */}
+            {(data?.bySet.length ?? 0) > 0 && (
+              <Card className="p-6">
+                <h2 className="mb-6 text-sm font-semibold text-foreground">Cards by set (top {data!.bySet.length})</h2>
+                <ResponsiveContainer width="100%" height={280}>
+                  <BarChart data={data!.bySet} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+                    <XAxis type="number" tick={{ fill: "#5a6478", fontSize: 11 }} axisLine={false} tickLine={false} />
+                    <YAxis
+                      type="category"
+                      dataKey="set"
+                      width={120}
+                      tick={{ fill: "#5a6478", fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      cursor={{ fill: "rgba(15,23,42,0.04)" }}
+                      contentStyle={{
+                        background: "#ffffff",
+                        border: "1px solid #e6e8ef",
+                        borderRadius: 12,
+                        fontSize: 12,
+                        boxShadow: "0 6px 16px -4px rgba(15,23,42,0.12)",
+                      }}
+                      labelStyle={{ color: "#0f172a", fontWeight: 600 }}
+                      itemStyle={{ color: "#5a6478" }}
+                    />
+                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                      {data!.bySet.map((_, i) => (
+                        <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </Card>
+            )}
+
+            {/* Per-binder list */}
+            {(data?.binders.length ?? 0) > 0 && (
+              <Card className="p-6">
+                <h2 className="mb-4 text-sm font-semibold text-foreground">Binders</h2>
+                <div className="space-y-1">
+                  {data!.binders.map((b) => {
+                    const slots = b.pageCount * (SLOTS_PER_PAGE[b.pocketLayout] ?? 9);
+                    return (
+                      <Link
+                        key={b.id}
+                        href={`/binder/${b.id}`}
+                        className="group -mx-2 flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-surface-muted"
+                      >
+                        <div className="h-7 w-7 flex-shrink-0 rounded-lg" style={{ background: b.coverColor }} />
+                        <span className="flex-1 truncate text-sm font-medium text-foreground">{b.name}</span>
+                        <span className="text-xs text-muted tabular-nums">{slots} slots</span>
+                        <ChevronRight className="h-4 w-4 text-subtle transition-transform group-hover:translate-x-0.5" />
+                      </Link>
+                    );
+                  })}
+                </div>
+              </Card>
+            )}
+
+            {data?.totalCards === 0 && (
+              <EmptyState
+                icon={<Layers className="h-7 w-7" />}
+                title="No cards yet"
+                description="Add cards to your binders and your collection stats will appear here."
+              />
+            )}
+          </>
         )}
       </main>
     </div>

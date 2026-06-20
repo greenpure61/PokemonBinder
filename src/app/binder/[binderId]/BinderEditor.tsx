@@ -23,6 +23,9 @@ import { RightSidebar } from "@/components/layout/RightSidebar";
 import { CardSearchPanel } from "@/components/cards/CardSearchPanel";
 import { BinderPageFlat } from "@/components/binder/BinderPageFlat";
 import { CardZoomModal } from "@/components/cards/CardZoomModal";
+import { Button } from "@/components/ui/Button";
+import { Spinner } from "@/components/ui/Spinner";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { DragItem } from "@/types/dnd";
 
 interface Props {
@@ -49,7 +52,7 @@ export function BinderEditor({ binderId }: Props) {
     const { default: html2canvas } = await import("html2canvas");
     const canvas = await html2canvas(flatRef.current, {
       useCORS: true,
-      backgroundColor: "#12182b",
+      backgroundColor: "#ffffff",
       scale: 2,
     });
     const link = document.createElement("a");
@@ -125,8 +128,8 @@ export function BinderEditor({ binderId }: Props) {
 
   if (isLoading || !binder) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#0a0e1a]">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-white/10 border-t-white/60" />
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Spinner className="h-8 w-8" />
       </div>
     );
   }
@@ -155,26 +158,26 @@ export function BinderEditor({ binderId }: Props) {
           </div>
 
           {/* Bottom navigation */}
-          <div className="flex items-center justify-center gap-3 flex-shrink-0">
-            <button
+          <div className="flex flex-shrink-0 items-center justify-center gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => goToSpread(currentSpreadIndex - 1)}
               disabled={currentSpreadIndex === 0}
-              className="rounded-lg border border-white/10 px-4 py-1.5 text-xs text-white/50 hover:text-white hover:border-white/25 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
             >
-              ← Prev
-            </button>
-            <SpreadJump
-              current={currentSpreadIndex}
-              total={Math.ceil(binder.pageCount / 2)}
-              onJump={goToSpread}
-            />
-            <button
+              <ChevronLeft className="h-4 w-4" />
+              Prev
+            </Button>
+            <SpreadJump current={currentSpreadIndex} total={Math.ceil(binder.pageCount / 2)} onJump={goToSpread} />
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={() => goToSpread(currentSpreadIndex + 1)}
               disabled={currentSpreadIndex >= Math.ceil(binder.pageCount / 2) - 1}
-              className="rounded-lg border border-white/10 px-4 py-1.5 text-xs text-white/50 hover:text-white hover:border-white/25 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
             >
-              Next →
-            </button>
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
       </EditorLayout>
@@ -206,11 +209,14 @@ export function BinderEditor({ binderId }: Props) {
 function SpreadJump({ current, total, onJump }: { current: number; total: number; onJump: (i: number) => void }) {
   const [value, setValue] = useState(String(current + 1));
   const [editing, setEditing] = useState(false);
+  const [trackedCurrent, setTrackedCurrent] = useState(current);
 
   // Keep the input in sync with external spread changes (prev/next, arrow keys)
-  useEffect(() => {
+  // during render, rather than via a prop-syncing effect.
+  if (current !== trackedCurrent) {
+    setTrackedCurrent(current);
     if (!editing) setValue(String(current + 1));
-  }, [current, editing]);
+  }
 
   function commit() {
     setEditing(false);
@@ -220,7 +226,7 @@ function SpreadJump({ current, total, onJump }: { current: number; total: number
   }
 
   return (
-    <span className="flex items-center gap-1.5 text-xs text-white/30 tabular-nums">
+    <span className="flex items-center gap-1.5 text-xs text-muted tabular-nums">
       <span>Spread</span>
       <input
         value={value}
@@ -232,7 +238,7 @@ function SpreadJump({ current, total, onJump }: { current: number; total: number
           if (e.key === "Escape") { setValue(String(current + 1)); e.currentTarget.blur(); }
         }}
         aria-label="Jump to spread"
-        className="w-10 rounded-md bg-white/5 border border-white/10 px-1 py-0.5 text-center text-white/70 focus:outline-none focus:border-white/30 transition-colors"
+        className="w-11 rounded-md border border-border bg-surface px-1 py-1 text-center text-foreground transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
       />
       <span>/ {total}</span>
     </span>

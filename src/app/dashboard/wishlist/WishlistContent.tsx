@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
+import { Star, Check, X } from "lucide-react";
 import { CardZoomModal } from "@/components/cards/CardZoomModal";
+import { AppHeader } from "@/components/layout/AppHeader";
+import { EmptyState } from "@/components/ui/EmptyState";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { useToast } from "@/components/ui/Toast";
+import { cn } from "@/lib/utils";
 
 interface WishlistItem {
   id: string;
@@ -29,6 +34,7 @@ export function WishlistContent() {
   const [sort, setSort] = useState<SortMode>("recent");
   const [ownedIds, setOwnedIds] = useState<Set<string>>(new Set());
   const [zoom, setZoom] = useState<{ cardId: string; cardName: string; cardImageSmall: string } | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     fetch("/api/wishlist")
@@ -45,6 +51,7 @@ export function WishlistContent() {
   async function removeItem(cardId: string) {
     await fetch(`/api/wishlist/${encodeURIComponent(cardId)}`, { method: "DELETE" });
     setItems((prev) => prev.filter((i) => i.cardId !== cardId));
+    toast("Removed from wishlist", "success");
   }
 
   const sortedItems = useMemo(() => {
@@ -53,9 +60,7 @@ export function WishlistContent() {
       copy.sort((a, b) => a.cardName.localeCompare(b.cardName));
     } else if (sort === "set") {
       copy.sort(
-        (a, b) =>
-          (a.cardSet ?? "").localeCompare(b.cardSet ?? "") ||
-          a.cardName.localeCompare(b.cardName)
+        (a, b) => (a.cardSet ?? "").localeCompare(b.cardSet ?? "") || a.cardName.localeCompare(b.cardName)
       );
     }
     // "recent" keeps the API order (createdAt desc)
@@ -74,71 +79,60 @@ export function WishlistContent() {
     return Array.from(map.entries());
   }, [sortedItems, sort]);
 
-  const ownedCount = useMemo(
-    () => items.filter((i) => ownedIds.has(i.cardId)).length,
-    [items, ownedIds]
-  );
+  const ownedCount = useMemo(() => items.filter((i) => ownedIds.has(i.cardId)).length, [items, ownedIds]);
 
   return (
-    <div className="min-h-screen bg-[#0a0e1a]">
-      <header className="sticky top-0 z-30 border-b border-white/5 bg-[#0a0e1a]/80 backdrop-blur-md">
-        <div className="mx-auto flex max-w-5xl items-center gap-4 px-6 py-4">
-          <Link href="/dashboard" className="text-white/40 hover:text-white transition-colors">
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <h1 className="font-semibold text-white">Wishlist</h1>
-          <span className="text-xs text-white/30 ml-auto">
-            {items.length} card{items.length !== 1 ? "s" : ""}
-            {ownedCount > 0 && <span className="text-green-400/70"> · {ownedCount} owned</span>}
-          </span>
-        </div>
-      </header>
+    <div className="min-h-screen bg-background">
+      <AppHeader />
 
-      <main className="mx-auto max-w-5xl px-6 py-10">
-        {/* Sort control */}
-        {!loading && items.length > 0 && (
-          <div className="mb-6 flex items-center gap-1">
-            <span className="text-[11px] text-white/30 mr-1">Sort</span>
-            {SORT_OPTIONS.map(({ value, label }) => (
-              <button
-                key={value}
-                onClick={() => setSort(value)}
-                className={`rounded-md px-2.5 py-1 text-[11px] border transition-colors ${
-                  sort === value
-                    ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
-                    : "bg-white/5 border-transparent text-white/40 hover:text-white/60"
-                }`}
-              >
-                {label}
-              </button>
-            ))}
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-10">
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Wishlist</h1>
+            <p className="mt-1 text-sm text-muted">
+              {items.length} card{items.length !== 1 ? "s" : ""}
+              {ownedCount > 0 && <span className="text-success"> · {ownedCount} already owned</span>}
+            </p>
           </div>
-        )}
+
+          {!loading && items.length > 0 && (
+            <div className="flex items-center gap-1 rounded-lg bg-surface-muted p-0.5">
+              {SORT_OPTIONS.map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => setSort(value)}
+                  className={cn(
+                    "cursor-pointer rounded-md px-3 py-1.5 text-xs font-semibold transition-colors",
+                    sort === value ? "bg-surface text-foreground shadow-sm" : "text-muted hover:text-foreground"
+                  )}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {loading ? (
-          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-3">
+          <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-7">
             {Array.from({ length: 14 }).map((_, i) => (
-              <div key={i} className="aspect-[2.5/3.5] rounded-xl bg-white/5 animate-pulse" />
+              <Skeleton key={i} className="aspect-[2.5/3.5] rounded-xl" />
             ))}
           </div>
         ) : items.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="text-4xl mb-4">⭐</div>
-            <h2 className="text-lg font-medium text-white/70">Your wishlist is empty</h2>
-            <p className="text-sm text-white/30 mt-1">
-              Click any card and use “Add to Wishlist”, or right-click a card in your binder
-            </p>
-          </div>
+          <EmptyState
+            icon={<Star className="h-7 w-7" />}
+            title="Your wishlist is empty"
+            description="Open any card and use “Add to wishlist”, or right-click a card in your binder to save it here."
+          />
         ) : groups ? (
           <div className="space-y-8">
             {groups.map(([setName, setItems]) => (
               <div key={setName}>
-                <h2 className="mb-3 text-xs font-semibold text-white/40 uppercase tracking-wider">
-                  {setName} <span className="text-white/20">· {setItems.length}</span>
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-subtle">
+                  {setName} <span className="text-border-strong">· {setItems.length}</span>
                 </h2>
-                <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-3">
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-7">
                   {setItems.map((item) => (
                     <WishlistCard
                       key={item.cardId}
@@ -154,7 +148,7 @@ export function WishlistContent() {
           </div>
         ) : (
           <motion.div
-            className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-7 gap-3"
+            className="grid grid-cols-3 gap-3 sm:grid-cols-5 lg:grid-cols-7"
             initial="hidden"
             animate="show"
             variants={{ hidden: {}, show: { transition: { staggerChildren: 0.04 } } }}
@@ -201,42 +195,35 @@ function WishlistCard({ item, owned, onRemove, onZoom, animated }: CardProps) {
   const inner = (
     <>
       {item.cardImageSmall ? (
-        <Image
-          src={item.cardImageSmall}
-          alt={item.cardName}
-          fill
-          sizes="120px"
-          className="rounded-xl object-cover"
-        />
+        <Image src={item.cardImageSmall} alt={item.cardName} fill sizes="120px" className="rounded-xl object-cover" />
       ) : (
-        <div className="w-full h-full rounded-xl bg-white/5 flex items-center justify-center text-white/20 text-xs text-center p-2">
+        <div className="flex h-full w-full items-center justify-center rounded-xl bg-surface-muted p-2 text-center text-xs text-muted">
           {item.cardName}
         </div>
       )}
 
       {/* Owned badge */}
       {owned && (
-        <div className="absolute top-1 left-1 z-10 flex items-center gap-0.5 rounded-full bg-green-500/90 px-1 py-0.5 shadow-md">
-          <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-          </svg>
-          <span className="text-white text-[8px] font-semibold pr-0.5">Owned</span>
+        <div className="absolute left-1 top-1 z-10 flex items-center gap-0.5 rounded-full bg-success px-1.5 py-0.5 shadow-md">
+          <Check className="h-2.5 w-2.5 text-white" strokeWidth={3} />
+          <span className="pr-0.5 text-[8px] font-semibold text-white">Owned</span>
         </div>
       )}
 
       <button
-        onClick={(e) => { e.stopPropagation(); onRemove(item.cardId); }}
-        className="absolute top-1 right-1 z-10 rounded-full bg-black/70 p-0.5 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-900/80"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove(item.cardId);
+        }}
+        className="absolute right-1 top-1 z-10 rounded-full bg-white/90 p-1 text-slate-600 opacity-0 shadow-md transition-opacity hover:bg-white hover:text-danger group-hover:opacity-100"
         aria-label="Remove from wishlist"
       >
-        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-        </svg>
+        <X className="h-3 w-3" strokeWidth={2.5} />
       </button>
 
-      <div className="absolute inset-x-0 bottom-0 rounded-b-xl bg-gradient-to-t from-black/80 to-transparent p-1.5 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-        <p className="text-white text-xs font-medium truncate">{item.cardName}</p>
-        {item.cardSet && <p className="text-white/50 text-xs truncate">{item.cardSet}</p>}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-xl bg-gradient-to-t from-black/80 to-transparent p-1.5 opacity-0 transition-opacity group-hover:opacity-100">
+        <p className="truncate text-xs font-medium text-white">{item.cardName}</p>
+        {item.cardSet && <p className="truncate text-xs text-white/60">{item.cardSet}</p>}
       </div>
     </>
   );

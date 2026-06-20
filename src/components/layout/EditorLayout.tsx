@@ -21,6 +21,8 @@ export function EditorLayout({ topNav, leftSidebar, children, rightSidebar }: Pr
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Render-after-mount guard so mobile overlays don't flash before we close them.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     // Start with sidebars closed on mobile
     if (window.innerWidth < 1024) {
@@ -31,36 +33,29 @@ export function EditorLayout({ topNav, leftSidebar, children, rightSidebar }: Pr
   }, []);
 
   return (
-    <div className="flex flex-col h-screen bg-[#0a0e1a] overflow-hidden">
+    <div className="flex h-screen flex-col overflow-hidden bg-background">
       {topNav}
-      <div className="flex flex-1 overflow-hidden relative">
-
+      <div className="relative flex flex-1 overflow-hidden">
         {/* Left sidebar — desktop animated width */}
         <motion.aside
           initial={false}
           animate={{ width: leftOpen ? 320 : 0 }}
           transition={SPRING}
-          className="hidden lg:block flex-shrink-0 overflow-hidden"
+          className="hidden flex-shrink-0 overflow-hidden lg:block"
         >
-          <div className="w-80 h-full flex flex-col border-r border-white/5">
-            {leftSidebar}
-          </div>
+          <div className="flex h-full w-80 flex-col border-r border-border bg-surface">{leftSidebar}</div>
         </motion.aside>
 
-        <main className="flex-1 flex flex-col overflow-hidden p-4 min-w-0 min-h-0">
-          {children}
-        </main>
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden p-4">{children}</main>
 
         {/* Right sidebar — desktop animated width */}
         <motion.aside
           initial={false}
           animate={{ width: rightOpen ? 224 : 0 }}
           transition={SPRING}
-          className="hidden lg:block flex-shrink-0 overflow-hidden"
+          className="hidden flex-shrink-0 overflow-hidden lg:block"
         >
-          <div className="w-56 h-full flex flex-col border-l border-white/5">
-            {rightSidebar}
-          </div>
+          <div className="flex h-full w-56 flex-col border-l border-border bg-surface">{rightSidebar}</div>
         </motion.aside>
 
         {/* Mobile left overlay */}
@@ -68,22 +63,19 @@ export function EditorLayout({ topNav, leftSidebar, children, rightSidebar }: Pr
           {mounted && leftOpen && (
             <motion.div
               key="left-overlay"
-              className="lg:hidden fixed inset-0 z-40 flex"
+              className="fixed inset-0 z-40 flex lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                onClick={toggleLeft}
-              />
+              <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={toggleLeft} />
               <motion.aside
                 initial={{ x: "-100%" }}
                 animate={{ x: 0 }}
                 exit={{ x: "-100%" }}
                 transition={SPRING}
-                className="relative z-10 w-72 bg-[#0d1220] border-r border-white/10 flex flex-col overflow-hidden shadow-2xl"
+                className="relative z-10 flex w-72 flex-col overflow-hidden border-r border-border bg-surface shadow-xl"
               >
                 {leftSidebar}
               </motion.aside>
@@ -96,22 +88,19 @@ export function EditorLayout({ topNav, leftSidebar, children, rightSidebar }: Pr
           {mounted && rightOpen && (
             <motion.div
               key="right-overlay"
-              className="lg:hidden fixed inset-0 z-40 flex justify-end"
+              className="fixed inset-0 z-40 flex justify-end lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.2 }}
             >
-              <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                onClick={toggleRight}
-              />
+              <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={toggleRight} />
               <motion.aside
                 initial={{ x: "100%" }}
                 animate={{ x: 0 }}
                 exit={{ x: "100%" }}
                 transition={SPRING}
-                className="relative z-10 w-72 bg-[#0d1220] border-l border-white/10 flex flex-col overflow-hidden shadow-2xl"
+                className="relative z-10 flex w-72 flex-col overflow-hidden border-l border-border bg-surface shadow-xl"
               >
                 {rightSidebar}
               </motion.aside>

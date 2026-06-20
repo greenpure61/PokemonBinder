@@ -6,5 +6,5 @@ import { DashboardContent } from "./DashboardContent";
 export default async function DashboardPage() {
   const session = await getServerSession(authOptions);
   if (!session) redirect("/login");
-  return <DashboardContent user={session.user} />;
+  return <DashboardContent />;
 }

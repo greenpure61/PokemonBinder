@@ -1,57 +1,128 @@
 @import "tailwindcss";
 
+/* Font is injected at runtime by next/font (see layout.tsx) → reference inline. */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
 
-  /* Brand palette */
-  --color-navy-950: #0a0e1a;
-  --color-navy-900: #0f1628;
-  --color-navy-800: #151e38;
-  --color-navy-700: #1d2a4a;
-  --color-navy-600: #243357;
+@theme {
+  /* ---- Surfaces & text (light) ---- */
+  --color-background: #f6f7fb;        /* app/page background */
+  --color-surface: #ffffff;           /* cards, panels, nav */
+  --color-surface-muted: #f1f3f8;     /* subtle filled sections, inputs */
+  --color-surface-sunken: #eef1f7;    /* wells, tracks */
+  --color-border: #e6e8ef;            /* default hairline */
+  --color-border-strong: #d6dae4;     /* emphasized dividers */
 
-  --color-gold-400: #f5c842;
-  --color-gold-500: #e8b820;
-  --color-gold-600: #c9a018;
+  --color-foreground: #0f172a;        /* primary text */
+  --color-muted: #5a6478;             /* secondary text (>=4.5:1 on white) */
+  --color-subtle: #8a93a6;            /* tertiary text / placeholders */
 
-  --color-glass-white: rgba(255, 255, 255, 0.05);
-  --color-glass-border: rgba(255, 255, 255, 0.1);
+  /* ---- Brand: blue primary + gold accent ---- */
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-primary-active: #1e40af;
+  --color-primary-soft: #eaf1ff;      /* tinted background */
+  --color-primary-foreground: #ffffff;
+
+  --color-accent: #f5b91e;
+  --color-accent-hover: #e0a700;
+  --color-accent-soft: #fdf3da;
+  --color-accent-foreground: #3a2c05; /* readable text on gold */
+
+  /* ---- Status ---- */
+  --color-success: #16a34a;
+  --color-success-soft: #e6f6ec;
+  --color-warning: #d97706;
+  --color-warning-soft: #fcefdd;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-danger-soft: #fdebeb;
+
+  /* ---- Soft shadows tuned for a light UI ---- */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.05);
+  --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.05);
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 6px 16px -4px rgba(15, 23, 42, 0.10), 0 2px 6px -2px rgba(15, 23, 42, 0.06);
+  --shadow-lg: 0 14px 34px -8px rgba(15, 23, 42, 0.14), 0 4px 12px -4px rgba(15, 23, 42, 0.08);
+  --shadow-xl: 0 28px 60px -12px rgba(15, 23, 42, 0.18);
+  --shadow-2xl: 0 40px 90px -20px rgba(15, 23, 42, 0.22);
+
+  /* ---- Z-index scale ---- */
+  --z-base: 0;
+  --z-sticky: 10;
+  --z-dropdown: 20;
+  --z-overlay: 40;
+  --z-modal: 50;
+  --z-toast: 60;
 }
 
 :root {
-  --background: #0a0e1a;
-  --foreground: #e8eaf0;
+  color-scheme: light;
+}
+
+* {
+  border-color: var(--color-border);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Glassmorphism utility */
+/* Visible, consistent keyboard focus everywhere */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary) 22%, transparent);
+}
+
+/* Card/panel surface used during migration and by simple panels */
 .glass {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
-/* Scrollbar styling */
+/* Subtle gradient text utility for hero accents */
+.text-gradient {
+  background: linear-gradient(135deg, var(--color-primary), #4f7df6);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Scrollbars — light, unobtrusive */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
+  background: #cdd3df;
+  border-radius: 999px;
+  border: 2px solid var(--color-background);
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: #b4bccd;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
