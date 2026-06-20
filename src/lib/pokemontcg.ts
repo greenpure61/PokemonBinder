@@ -53,12 +53,12 @@ function setIdFromCardId(id: string): string {
   return i > 0 ? id.slice(0, i) : id;
 }
 
-// Pokémon TCG Pocket (the mobile game) is published by TCGdex under its own
-// series. Exclude it so only physical/real TCG cards appear in the app.
-function isPocketSet(s: TCGSetObject): boolean {
-  const serieId = s.serie?.id?.toLowerCase() ?? "";
-  const serieName = s.serie?.name?.toLowerCase() ?? "";
-  return serieId === "tcgp" || serieName.includes("pocket");
+// Pokémon TCG Pocket (the mobile game) is served by TCGdex alongside physical
+// cards. The brief /sets endpoint omits the series, so identify Pocket by set
+// id: its sets are "A1", "A1a", "A2"… and the promo "P-A" (no physical set uses
+// these). Matching by id is language-agnostic since ids don't get localized.
+function isPocketSetId(setId: string): boolean {
+  return /^A\d/.test(setId) || setId === "P-A";
 }
 
 async function fetchRawSets(lang: Lang): Promise<TCGSetObject[]> {
@@ -66,11 +66,6 @@ async function fetchRawSets(lang: Lang): Promise<TCGSetObject[]> {
   if (!res.ok) return [];
   const arr = await res.json();
   return Array.isArray(arr) ? arr : [];
-}
-
-// Set of TCG Pocket set ids, used to filter Pocket cards out of search results.
-async function pocketSetIds(lang: Lang): Promise<Set<string>> {
-  return new Set((await fetchRawSets(lang)).filter(isPocketSet).map((s) => s.id));
 }
 
 // TCG Pocket uses its own rarity system (diamonds / stars / shinies / crown)
@@ -176,10 +171,9 @@ export async function searchCards(params: CardSearchParams): Promise<PokeTCGResp
   const res = await fetch(url.toString(), { next: { revalidate: REVALIDATE } });
   if (!res.ok) throw new Error(`TCGdex API error: ${res.status}`);
   const briefs: TCGBriefCard[] = await res.json();
-  const excluded = await pocketSetIds(lang);
   const cards = briefs
     .map((c) => normalizeBrief(c, emptySet(setIdFromCardId(c.id))))
-    .filter((c) => !excluded.has(setIdFromCardId(c.id)));
+    .filter((c) => !isPocketSetId(setIdFromCardId(c.id)));
   // hasMore is based on the raw page size so pagination keeps working even when
   // some Pocket cards are filtered out of a page.
   return { data: cards, page, pageSize, count: cards.length, totalCount: 0, hasMore: briefs.length >= pageSize };
@@ -200,7 +194,7 @@ export async function getSets(lang?: string): Promise<PokeTCGSetsResponse> {
   // Pokémon TCG Pocket sets are excluded — physical TCG only.
   const seen = new Set<string>();
   const sets = arr
-    .filter((s) => !isPocketSet(s))
+    .filter((s) => !isPocketSetId(s.id))
     .map(normalizeSet)
     .reverse()
     .filter((s) => (seen.has(s.id) ? false : (seen.add(s.id), true)));
