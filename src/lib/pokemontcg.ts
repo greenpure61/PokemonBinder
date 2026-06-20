@@ -53,6 +53,35 @@ function setIdFromCardId(id: string): string {
   return i > 0 ? id.slice(0, i) : id;
 }
 
+// Pokémon TCG Pocket (the mobile game) is published by TCGdex under its own
+// series. Exclude it so only physical/real TCG cards appear in the app.
+function isPocketSet(s: TCGSetObject): boolean {
+  const serieId = s.serie?.id?.toLowerCase() ?? "";
+  const serieName = s.serie?.name?.toLowerCase() ?? "";
+  return serieId === "tcgp" || serieName.includes("pocket");
+}
+
+async function fetchRawSets(lang: Lang): Promise<TCGSetObject[]> {
+  const res = await fetch(`${BASE}/${lang}/sets`, { next: { revalidate: 86400 } });
+  if (!res.ok) return [];
+  const arr = await res.json();
+  return Array.isArray(arr) ? arr : [];
+}
+
+// Set of TCG Pocket set ids, used to filter Pocket cards out of search results.
+async function pocketSetIds(lang: Lang): Promise<Set<string>> {
+  return new Set((await fetchRawSets(lang)).filter(isPocketSet).map((s) => s.id));
+}
+
+// TCG Pocket uses its own rarity system (diamonds / stars / shinies / crown)
+// that doesn't exist on physical cards — keep these out of the rarity filter.
+// Physical "Shiny rare"/"Shiny Ultra Rare" don't match the "<n> Shiny" pattern.
+const POCKET_RARITY = /^(one|two|three|four)\s+(diamond|star|shiny)$/i;
+function isPocketRarity(r: string): boolean {
+  const t = r.trim();
+  return t.toLowerCase() === "crown" || POCKET_RARITY.test(t);
+}
+
 function emptySet(id: string): PokeTCGSet {
   return { id, name: "", series: "", printedTotal: 0, total: 0, releaseDate: "", images: { symbol: "", logo: "" } };
 }
@@ -147,8 +176,13 @@ export async function searchCards(params: CardSearchParams): Promise<PokeTCGResp
   const res = await fetch(url.toString(), { next: { revalidate: REVALIDATE } });
   if (!res.ok) throw new Error(`TCGdex API error: ${res.status}`);
   const briefs: TCGBriefCard[] = await res.json();
-  const cards = briefs.map((c) => normalizeBrief(c, emptySet(setIdFromCardId(c.id))));
-  return { data: cards, page, pageSize, count: cards.length, totalCount: 0, hasMore: cards.length >= pageSize };
+  const excluded = await pocketSetIds(lang);
+  const cards = briefs
+    .map((c) => normalizeBrief(c, emptySet(setIdFromCardId(c.id))))
+    .filter((c) => !excluded.has(setIdFromCardId(c.id)));
+  // hasMore is based on the raw page size so pagination keeps working even when
+  // some Pocket cards are filtered out of a page.
+  return { data: cards, page, pageSize, count: cards.length, totalCount: 0, hasMore: briefs.length >= pageSize };
 }
 
 export async function getCardById(id: string, lang?: string): Promise<PokeTCGCard | null> {
@@ -160,13 +194,13 @@ export async function getCardById(id: string, lang?: string): Promise<PokeTCGCar
 }
 
 export async function getSets(lang?: string): Promise<PokeTCGSetsResponse> {
-  const res = await fetch(`${BASE}/${asLang(lang)}/sets`, { next: { revalidate: 86400 } });
-  if (!res.ok) throw new Error(`TCGdex API error: ${res.status}`);
-  const arr: TCGSetObject[] = await res.json();
+  const arr = await fetchRawSets(asLang(lang));
   // TCGdex returns sets chronologically; reverse for newest-first in the picker.
   // Some language lists contain duplicate set IDs, so dedupe (keeping the first/newest).
+  // Pokémon TCG Pocket sets are excluded — physical TCG only.
   const seen = new Set<string>();
   const sets = arr
+    .filter((s) => !isPocketSet(s))
     .map(normalizeSet)
     .reverse()
     .filter((s) => (seen.has(s.id) ? false : (seen.add(s.id), true)));
@@ -178,5 +212,5 @@ export async function getRarities(lang?: string): Promise<string[]> {
   if (!res.ok) return [];
   const arr = await res.json();
   if (!Array.isArray(arr)) return [];
-  return [...new Set(arr.filter((r): r is string => typeof r === "string" && r !== "None"))];
+  return [...new Set(arr.filter((r): r is string => typeof r === "string" && r !== "None" && !isPocketRarity(r)))];
 }
