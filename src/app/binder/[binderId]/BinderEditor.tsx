@@ -36,6 +36,7 @@ export function BinderEditor({ binderId }: Props) {
   const { data: binderData, isLoading } = useBinder(binderId);
   const setBinder = useBinderStore((s) => s.setBinder);
   const binder = useBinderStore((s) => s.binder);
+  const storeBinderId = useBinderStore((s) => s.binder?.id);
   const isDirty = useBinderStore((s) => s.isDirty);
   const isSaving = useBinderStore((s) => s.isSaving);
   const currentSpreadIndex = useBinderStore((s) => s.currentSpreadIndex);
@@ -63,9 +64,12 @@ export function BinderEditor({ binderId }: Props) {
 
   useBinderPersist();
 
+  // Only hydrate the editor store from server data when loading a *different*
+  // binder (or the first load). Returning to the same binder keeps the in-memory
+  // working copy, so edits aren't clobbered by a still-cached pre-edit copy.
   useEffect(() => {
-    if (binderData) setBinder(binderData);
-  }, [binderData, setBinder]);
+    if (binderData && binderData.id !== storeBinderId) setBinder(binderData);
+  }, [binderData, storeBinderId, setBinder]);
 
   useEffect(() => {
     if (!binder) return;
