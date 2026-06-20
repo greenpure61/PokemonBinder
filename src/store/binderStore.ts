@@ -29,6 +29,7 @@ interface BinderState {
   setBinder: (b: BinderWithPages) => void;
   updateSlot: (pageId: string, slotIndex: number, card: SlotCard | null) => void;
   swapSlots: (a: SlotRef, b: SlotRef) => void;
+  clearAllSlots: () => void;
   goToSpread: (index: number) => void;
   updateName: (name: string) => void;
   updateIsPublic: (isPublic: boolean) => void;
@@ -82,6 +83,31 @@ export const useBinderStore = create<BinderState>((set, get) => ({
             return page;
           }),
         },
+      };
+    }),
+
+  clearAllSlots: () =>
+    set((state) => {
+      if (!state.binder) return state;
+      const dirty = new Set(state.dirtyPageIds);
+      const pages = state.binder.pages.map((p) => {
+        if (!p.slots.some((s) => s.cardId)) return p; // nothing to clear on this page
+        dirty.add(p.id);
+        return {
+          ...p,
+          slots: p.slots.map((s) => ({
+            ...s,
+            cardId: null,
+            cardName: null,
+            cardImageSmall: null,
+            cardSet: null,
+          })),
+        };
+      });
+      return {
+        isDirty: dirty.size > 0 || state.isDirty,
+        dirtyPageIds: [...dirty],
+        binder: { ...state.binder, pages },
       };
     }),
 

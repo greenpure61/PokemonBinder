@@ -1,11 +1,14 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Download } from "lucide-react";
+import { useState } from "react";
+import { ChevronLeft, ChevronRight, Download, Trash2 } from "lucide-react";
 import { useBinderStore } from "@/store/binderStore";
 import { getSlotsPerPage } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 import { Progress } from "@/components/ui/Progress";
 import { Input } from "@/components/ui/Input";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/components/ui/Toast";
 
 const LAYOUT_LABELS = {
   FOUR_POCKET: "4-pocket",
@@ -21,6 +24,9 @@ export function RightSidebar({ onExport }: Props) {
   const binder = useBinderStore((s) => s.binder);
   const currentSpreadIndex = useBinderStore((s) => s.currentSpreadIndex);
   const goToSpread = useBinderStore((s) => s.goToSpread);
+  const clearAllSlots = useBinderStore((s) => s.clearAllSlots);
+  const { toast } = useToast();
+  const [confirmClear, setConfirmClear] = useState(false);
 
   if (!binder) return null;
 
@@ -105,15 +111,38 @@ export function RightSidebar({ onExport }: Props) {
         />
       </div>
 
-      {/* Export */}
-      {onExport && (
-        <div className="mt-auto border-t border-border pt-4">
+      {/* Actions */}
+      <div className="mt-auto space-y-2 border-t border-border pt-4">
+        {onExport && (
           <Button variant="secondary" className="w-full" onClick={onExport}>
             <Download className="h-4 w-4" />
             Export as PNG
           </Button>
-        </div>
-      )}
+        )}
+        <Button
+          variant="danger"
+          className="w-full"
+          onClick={() => setConfirmClear(true)}
+          disabled={totalFilled === 0}
+        >
+          <Trash2 className="h-4 w-4" />
+          Remove all cards
+        </Button>
+      </div>
+
+      <ConfirmDialog
+        open={confirmClear}
+        onClose={() => setConfirmClear(false)}
+        onConfirm={() => {
+          clearAllSlots();
+          setConfirmClear(false);
+          toast("Removed all cards from this binder", "success");
+        }}
+        title="Remove all cards?"
+        description={`This empties every slot in "${binder.name}" (${totalFilled} card${totalFilled === 1 ? "" : "s"}). The binder and its pages are kept. This can't be undone.`}
+        confirmLabel="Remove all cards"
+        destructive
+      />
     </div>
   );
 }
