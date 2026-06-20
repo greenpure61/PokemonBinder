@@ -15,9 +15,9 @@ export async function GET(req: Request) {
 
   try {
     const data = await searchCards({ query, page, pageSize, setId, orderBy, types, supertypes, rarity, lang });
-    return NextResponse.json(data, {
-      headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" },
-    });
+    // No browser caching — upstream TCGdex calls are already cached server-side,
+    // and results are post-filtered (Pocket excluded), so they must stay fresh.
+    return NextResponse.json(data, { headers: { "Cache-Control": "no-store" } });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Search failed";
     return NextResponse.json({ error: message }, { status: 502 });
