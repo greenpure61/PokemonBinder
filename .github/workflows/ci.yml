@@ -15,10 +15,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       NEXT_TELEMETRY_DISABLED: "1"
-      # No live DB is used in CI. A syntactically valid URL satisfies the Prisma
-      # config and client construction; nothing actually connects (lint,
-      # typecheck, unit tests, and `next build` don't open a connection).
+      # No live DB or real auth is used in CI. These dummy values satisfy env
+      # validation (src/lib/env.ts) and Prisma client construction during
+      # `next build`; nothing actually connects or authenticates (lint,
+      # typecheck, unit tests, and the build don't open a connection).
       DATABASE_URL: "postgresql://user:pass@localhost:5432/db"
+      GOOGLE_CLIENT_ID: "ci-dummy-client-id"
+      GOOGLE_CLIENT_SECRET: "ci-dummy-client-secret"
+      NEXTAUTH_SECRET: "ci-dummy-nextauth-secret"
     steps:
       - uses: actions/checkout@v4
 

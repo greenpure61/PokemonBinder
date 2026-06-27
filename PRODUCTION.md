@@ -31,32 +31,39 @@ Do this before touching app code so everything after is verifiable.
 _Verified locally: 23 tests pass, `typecheck` clean, `lint` clean (1 pre-existing
 warning), `next build` green._
 
-## Phase 1 — Harden the API layer · ~1–1.5 days
+## Phase 1 — Harden the API layer · ~1–1.5 days · ✅ DONE
 
 Highest-leverage correctness + security work. ~13 route files in `src/app/api`.
+Shared helpers live in `src/lib/api.ts` (`withApiHandler`, `requireUserId`,
+`parseBody`, `parseQuery`, `ApiError`) and schemas in `src/lib/schemas.ts`.
 
-- [ ] **Runtime input validation with zod** — schemas for every request body and
-      route param. Known gaps:
-  - [ ] `slots/route.ts:22` — `{ slots }` is destructured and `.map`-ed with no
-        check; malformed/missing body throws a raw 500. Validate the array, each
-        slot's `slotIndex`, and the card fields.
-  - [ ] `binders/route.ts:50` — body cast to `CreateBinderInput` with no runtime
-        check; validate `name`, `pocketLayout` (enum), `pageCount` (bounded int).
-  - [ ] wishlist routes — same treatment.
-- [ ] **Bound + transaction the slots write** — `slots/route.ts:24` fires an
-      unbounded `Promise.all` of upserts. Cap the array length, validate each
-      `slotIndex` against the page's layout (`getSlotsPerPage`), and wrap in
-      `prisma.$transaction`.
-- [ ] **Shared error handling** — no route has a `try/catch` today; failures leak
-      stack-trace 500s. Add a `withApiHandler` wrapper (or per-route try/catch)
-      returning consistent JSON: zod errors → 400, not-found → 404, unexpected →
-      generic 500 (no internals leaked).
-- [ ] **Env validation at boot** — replace ad-hoc `process.env.X!`
-      (`auth.ts:10–11`, `prisma.ts:7`) with one validated `lib/env.ts` (zod)
-      asserting `DATABASE_URL`, `GOOGLE_CLIENT_ID/SECRET`, `NEXTAUTH_SECRET`,
-      `NEXTAUTH_URL`. Fail fast at startup.
-- [ ] **Route tests** for validation + ownership paths (401 unauthenticated,
-      404 cross-user access, 400 bad input).
+- [x] **Runtime input validation with zod** — schemas for every request body and
+      the card-search query string:
+  - [x] `slots` route — validates the array, each `slotIndex`, and card fields.
+  - [x] `binders` POST — validates `name`, `pocketLayout` (enum), `pageCount`,
+        `coverColor` (hex); `binders/[id]` PUT validated too.
+  - [x] wishlist POST — validated.
+  - [x] `cards/search` query — coerced/bounded `page`/`pageSize`, enum `orderBy`
+        (incl. `newest`) and `lang`.
+- [x] **Bound + transaction the slots write** — capped at 12 slots, each
+      `slotIndex` checked against the binder's actual layout (`getSlotsPerPage`),
+      duplicates rejected, and all upserts run in a single `prisma.$transaction`.
+- [x] **Shared error handling** — every route wrapped with `withApiHandler`:
+      ApiError → its status, ZodError → 400, unexpected → logged + generic 500
+      (no internals leaked). Replaces the previous raw stack-trace 500s.
+- [x] **Env validation at boot** — `src/lib/env.ts` (zod) asserts `DATABASE_URL`,
+      `GOOGLE_CLIENT_ID/SECRET`, `NEXTAUTH_SECRET` (`NEXTAUTH_URL` optional);
+      wired into `prisma.ts` + `auth.ts`. Fails fast with a clear message.
+- [x] **Tests** — `src/lib/api.test.ts` (auth/parse/error-mapping) and
+      `src/lib/schemas.test.ts` (validation bounds). 56 tests total.
+
+_Verified locally: 56 tests pass, `typecheck` clean, `lint` clean, `next build`
+green. Confirmed all frontend payloads (cover colors, page counts, sort orders,
+wishlist/slot bodies) still pass the new validation._
+
+> Note: full cross-user 404 ownership tests would require mocking Prisma + the
+> whole route; deferred in favor of testing the shared building blocks. The
+> ownership `where` clauses are unchanged from the prior (working) routes.
 
 ## Phase 2 — Abuse & resource protection · ~half day
 

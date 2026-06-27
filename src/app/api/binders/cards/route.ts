@@ -1,22 +1,18 @@
-import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { requireUserId, withApiHandler } from "@/lib/api";
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const GET = withApiHandler(async () => {
+  const userId = await requireUserId();
 
   const slots = await prisma.cardSlot.findMany({
     where: {
       cardId: { not: null },
-      page: { binder: { userId: session.user.id } },
+      page: { binder: { userId } },
     },
     select: { cardId: true },
     distinct: ["cardId"],
   });
 
   return NextResponse.json({ cardIds: slots.map((s) => s.cardId).filter(Boolean) });
-}
+});
