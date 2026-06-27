@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { Star, X } from "lucide-react";
 import type { PokeTCGCard } from "@/types/pokemontcg";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "@/components/ui/Toast";
+import { CardImage } from "@/components/cards/CardImage";
 
 interface Props {
   cardId: string | null;
@@ -96,8 +96,16 @@ export function CardZoomModal({ cardId, cardName, cardImageSmall, lang, onClose 
               onClick={(e) => e.stopPropagation()}
             >
               {/* Card image */}
-              <div className="relative aspect-[2.5/3.5] w-56 flex-shrink-0 overflow-hidden rounded-2xl shadow-2xl sm:w-64">
-                <Image src={largeImage} alt={cardName} fill sizes="256px" className="object-cover" priority />
+              <div className="relative aspect-[2.5/3.5] w-56 flex-shrink-0 overflow-hidden rounded-2xl bg-surface-muted shadow-2xl sm:w-64">
+                <CardImage
+                  src={largeImage}
+                  alt={cardName}
+                  name={cardName}
+                  sizes="256px"
+                  className="object-cover"
+                  nameClassName="text-sm font-medium"
+                  priority
+                />
               </div>
 
               {/* Card details */}

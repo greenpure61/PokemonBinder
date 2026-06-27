@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
-import Image from "next/image";
 import { AnimatePresence, motion } from "framer-motion";
 import { Plus, X, Star, Eye, Trash2 } from "lucide-react";
 import type { CardSlot } from "@prisma/client";
 import type { DragItem } from "@/types/dnd";
 import { useToast } from "@/components/ui/Toast";
 import { cn } from "@/lib/utils";
+import { CardImage } from "@/components/cards/CardImage";
 
 interface Props {
   pageId: string;
@@ -106,21 +106,16 @@ export function CardSlotFlat({ pageId, slotIndex, slot, priority, onZoom, onRemo
             className="relative h-full w-full cursor-grab active:cursor-grabbing"
             onClick={() => onZoom(slot!.cardId!, slot!.cardName ?? "", slot!.cardImageSmall ?? "")}
           >
-            {slot!.cardImageSmall ? (
-              <Image
-                src={slot!.cardImageSmall}
-                alt={slot!.cardName ?? "Card"}
-                fill
-                sizes="120px"
-                className="select-none rounded-lg object-contain"
-                draggable={false}
-                priority={priority}
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center rounded-lg bg-surface-muted p-1 text-center">
-                <span className="text-[10px] leading-tight text-muted">{slot!.cardName ?? "Card"}</span>
-              </div>
-            )}
+            <CardImage
+              src={slot!.cardImageSmall ?? ""}
+              alt={slot!.cardName ?? "Card"}
+              name={slot!.cardName ?? "Card"}
+              sizes="120px"
+              className="select-none rounded-lg object-contain"
+              placeholderClassName="rounded-lg bg-surface-muted"
+              draggable={false}
+              priority={priority}
+            />
             <button
               onPointerDown={(e) => e.stopPropagation()}
               onClick={(e) => {

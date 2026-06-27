@@ -23,6 +23,8 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       // Card art (TCGdex is the catalog source — see src/lib/pokemontcg.ts).
       { protocol: "https", hostname: "assets.tcgdex.net" },
+      // Fallback card art for cards TCGdex has no image for (mostly promos).
+      { protocol: "https", hostname: "images.pokemontcg.io" },
       // Google account avatars (NextAuth profile images).
       { protocol: "https", hostname: "lh3.googleusercontent.com" },
     ],
