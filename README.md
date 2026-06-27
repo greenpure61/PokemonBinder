@@ -1,22 +1,14 @@
 # PokemonBinder
 
-A premium Pokémon card collection manager with an interactive 3D binder, drag-and-drop card editing, and full collection tracking.
+A Pokémon card collection manager with drag-and-drop binder editing, card search, and full collection tracking.
 
-![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript) ![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?style=flat-square&logo=prisma) ![Three.js](https://img.shields.io/badge/Three.js-0.184-black?style=flat-square&logo=three.js)
+![Next.js](https://img.shields.io/badge/Next.js-16-black?style=flat-square&logo=next.js) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue?style=flat-square&logo=typescript) ![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?style=flat-square&logo=prisma) ![Tailwind CSS](https://img.shields.io/badge/Tailwind-4-38BDF8?style=flat-square&logo=tailwindcss)
 
 ---
 
 ## Features
 
-### 3D Binder Viewer
-- Interactive 3D binder rendered with React Three Fiber
-- Procedural leatherette cover texture with stitching detail
-- Chrome ring mechanism with 4 rings
-- Smooth page-flip animation with a natural Z-lift arc
-- Orbit controls — rotate, zoom, inspect from any angle
-- Studio lighting with contact shadows
-
-### Flat Editor
+### Binder Editor
 - Two-page spread with drag-and-drop card placement (dnd-kit)
 - Drag cards from the search panel directly into any slot
 - Swap cards between slots by dragging one onto another
@@ -31,7 +23,7 @@ A premium Pokémon card collection manager with an interactive 3D binder, drag-a
 - Infinite scroll with intersection observer
 
 ### Collection Tools
-- **Public share** — make any binder public and share a read-only 3D link
+- **Public share** — make any binder public and share a read-only link
 - **Export as PNG** — download the current flat spread as a high-res image
 - **Collection stats** — total cards, set breakdown chart, fill rate per binder
 - **Wishlist** — save cards you want, view and manage them from the dashboard
@@ -53,8 +45,7 @@ A premium Pokémon card collection manager with an interactive 3D binder, drag-a
 | Framework | Next.js 16 (App Router, Turbopack) |
 | Language | TypeScript 5 |
 | Styling | Tailwind CSS v4 |
-| 3D | React Three Fiber v9, Drei v10, Three.js |
-| Animation | Framer Motion v12, @react-spring/three |
+| Animation | Framer Motion v12 |
 | Drag & Drop | dnd-kit |
 | Database | PostgreSQL (Neon serverless) |
 | ORM | Prisma 7 |
@@ -125,12 +116,12 @@ src/
 │   ├── binder/[binderId]/    # Main binder editor
 │   └── dashboard/            # Binder list, stats, wishlist
 ├── components/
-│   ├── binder/               # 3D canvas, mesh, page flip, flat editor, card slots
+│   ├── binder/               # Flat two-page editor, card slots
 │   ├── cards/                # Search panel, card grid, zoom modal
 │   ├── layout/               # Top nav, sidebars, editor layout
 │   └── ui/                   # GlassPanel and shared primitives
 ├── hooks/                    # useBinderData, useBinderPersist
-├── lib/                      # Prisma client, NextAuth config, PokéTCG client, utils
+├── lib/                      # Prisma client, NextAuth config, TCGdex client, utils, env, logging
 ├── store/                    # Zustand stores (binder, UI, card search)
 └── types/                    # Shared TypeScript types
 prisma/
@@ -147,7 +138,7 @@ User ──< Binder ──< BinderPage ──< CardSlot
 User ──< WishlistItem
 ```
 
-Card data is stored **denormalized** in `CardSlot` (id, name, image URL, set name) so binders load instantly without hitting the PokéTCG API on every page view. Full card metadata is only fetched when a user zooms in on a card.
+Card data is stored **denormalized** in `CardSlot` (id, name, image URL, set name) so binders load instantly without hitting the TCGdex API on every page view. Full card metadata is only fetched when a user zooms in on a card.
 
 ---
 
