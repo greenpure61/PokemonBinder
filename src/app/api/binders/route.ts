@@ -1,17 +1,13 @@
-import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { CreateBinderInput } from "@/types/binder";
+import { parseBody, requireUserId, withApiHandler } from "@/lib/api";
+import { createBinderSchema } from "@/lib/schemas";
 
-export async function GET() {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+export const GET = withApiHandler(async () => {
+  const userId = await requireUserId();
 
   const binders = await prisma.binder.findMany({
-    where: { userId: session.user.id },
+    where: { userId },
     include: {
       _count: { select: { pages: true } },
       pages: {
@@ -25,7 +21,7 @@ export async function GET() {
 
   // Count filled slots per binder (one query, aggregated in memory)
   const pageCounts = await prisma.binderPage.findMany({
-    where: { binder: { userId: session.user.id } },
+    where: { binder: { userId } },
     select: {
       binderId: true,
       _count: { select: { slots: { where: { cardId: { not: null } } } } },
@@ -39,25 +35,18 @@ export async function GET() {
   const withCounts = binders.map((b) => ({ ...b, cardCount: cardCountByBinder.get(b.id) ?? 0 }));
 
   return NextResponse.json(withCounts);
-}
+});
 
-export async function POST(req: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  const body: CreateBinderInput = await req.json();
-  if (!body.name?.trim()) {
-    return NextResponse.json({ error: "Name is required" }, { status: 400 });
-  }
+export const POST = withApiHandler(async (req) => {
+  const userId = await requireUserId();
+  const body = await parseBody(req, createBinderSchema);
 
   const pageCount = body.pageCount ?? 10;
 
   const binder = await prisma.binder.create({
     data: {
-      userId: session.user.id,
-      name: body.name.trim(),
+      userId,
+      name: body.name,
       description: body.description,
       coverColor: body.coverColor ?? "#1a1a2e",
       pocketLayout: body.pocketLayout ?? "NINE_POCKET",
@@ -72,4 +61,4 @@ export async function POST(req: Request) {
   });
 
   return NextResponse.json(binder, { status: 201 });
-}
+});

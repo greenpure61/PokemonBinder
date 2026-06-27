@@ -1,8 +1,7 @@
-import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { UpdateBinderInput } from "@/types/binder";
+import { ApiError, parseBody, requireUserId, withApiHandler } from "@/lib/api";
+import { updateBinderSchema } from "@/lib/schemas";
 
 type Ctx = { params: Promise<{ binderId: string }> };
 
@@ -10,15 +9,12 @@ async function getAuthorizedBinder(binderId: string, userId: string) {
   return prisma.binder.findFirst({ where: { id: binderId, userId } });
 }
 
-export async function GET(_req: Request, ctx: Ctx) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withApiHandler<Ctx>(async (_req, ctx) => {
+  const userId = await requireUserId();
   const { binderId } = await ctx.params;
+
   const binder = await prisma.binder.findFirst({
-    where: { id: binderId, userId: session.user.id },
+    where: { id: binderId, userId },
     include: {
       pages: {
         orderBy: { pageIndex: "asc" },
@@ -27,44 +23,38 @@ export async function GET(_req: Request, ctx: Ctx) {
     },
   });
 
-  if (!binder) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!binder) throw new ApiError(404, "Not found");
   return NextResponse.json(binder);
-}
+});
 
-export async function PUT(req: Request, ctx: Ctx) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const PUT = withApiHandler<Ctx>(async (req, ctx) => {
+  const userId = await requireUserId();
   const { binderId } = await ctx.params;
-  const existing = await getAuthorizedBinder(binderId, session.user.id);
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  const body: UpdateBinderInput = await req.json();
+  const existing = await getAuthorizedBinder(binderId, userId);
+  if (!existing) throw new ApiError(404, "Not found");
+
+  const body = await parseBody(req, updateBinderSchema);
   const updated = await prisma.binder.update({
     where: { id: binderId },
     data: {
-      ...(body.name && { name: body.name.trim() }),
+      ...(body.name !== undefined && { name: body.name }),
       ...(body.description !== undefined && { description: body.description }),
-      ...(body.coverColor && { coverColor: body.coverColor }),
+      ...(body.coverColor !== undefined && { coverColor: body.coverColor }),
       ...(body.isPublic !== undefined && { isPublic: body.isPublic }),
     },
   });
 
   return NextResponse.json(updated);
-}
+});
 
-export async function DELETE(_req: Request, ctx: Ctx) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const DELETE = withApiHandler<Ctx>(async (_req, ctx) => {
+  const userId = await requireUserId();
   const { binderId } = await ctx.params;
-  const existing = await getAuthorizedBinder(binderId, session.user.id);
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  const existing = await getAuthorizedBinder(binderId, userId);
+  if (!existing) throw new ApiError(404, "Not found");
 
   await prisma.binder.delete({ where: { id: binderId } });
   return new NextResponse(null, { status: 204 });
-}
+});

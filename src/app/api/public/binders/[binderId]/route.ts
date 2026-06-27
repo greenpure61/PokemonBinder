@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { ApiError, withApiHandler } from "@/lib/api";
 
 type Ctx = { params: Promise<{ binderId: string }> };
 
-export async function GET(_req: Request, ctx: Ctx) {
+export const GET = withApiHandler<Ctx>(async (_req, ctx) => {
   const { binderId } = await ctx.params;
 
   const binder = await prisma.binder.findFirst({
@@ -16,6 +17,6 @@ export async function GET(_req: Request, ctx: Ctx) {
     },
   });
 
-  if (!binder) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!binder) throw new ApiError(404, "Not found");
   return NextResponse.json(binder);
-}
+});
