@@ -25,7 +25,7 @@ A premium Pokémon card collection manager with an interactive 3D binder, drag-a
 - Auto-saves after 1.5 seconds of inactivity
 
 ### Card Search
-- Powered by the [PokéTCG API](https://pokemontcg.io/) (proxied server-side)
+- Powered by the [TCGdex API](https://tcgdex.dev) (proxied server-side)
 - Search by name with 400ms debounce
 - Filter by type (Fire, Water, Grass, Lightning, …)
 - Infinite scroll with intersection observer
@@ -69,10 +69,11 @@ A premium Pokémon card collection manager with an interactive 3D binder, drag-a
 ## Getting Started
 
 ### Prerequisites
-- Node.js 22+
+- Node.js 20+ (CI runs on 20)
 - A [Neon](https://neon.tech) PostgreSQL database
 - A Google OAuth app ([console.cloud.google.com](https://console.cloud.google.com))
-- A [PokéTCG API key](https://pokemontcg.io/) (free tier: 20k req/day)
+
+> Card data comes from the public [TCGdex](https://tcgdex.dev) API — no API key required.
 
 ### Setup
 
@@ -82,30 +83,34 @@ cd PokemonBinder
 npm install
 ```
 
-Create `.env.local`:
+Copy the environment template and fill it in (every variable is validated at
+startup by `src/lib/env.ts`):
 
-```env
-DATABASE_URL="postgresql://..."          # Neon connection string
-NEXTAUTH_SECRET="your-32-char-secret"
-NEXTAUTH_URL="http://localhost:3000"
-GOOGLE_CLIENT_ID="..."
-GOOGLE_CLIENT_SECRET="..."
-POKEMONTCG_API_KEY="..."                 # Optional — works without it at lower rate limits
+```bash
+cp .env.example .env.local
 ```
 
-Run the database migration:
+See [`.env.example`](./.env.example) for the full list. Generate a NextAuth
+secret with `openssl rand -base64 32`.
+
+Apply the database schema, then start the dev server:
 
 ```bash
 npx prisma migrate deploy
-```
-
-Start the dev server:
-
-```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) and sign in with Google.
+
+### Scripts
+
+```bash
+npm run dev        # dev server (Turbopack)
+npm run build      # production build
+npm run lint       # ESLint
+npm run typecheck  # tsc --noEmit
+npm run test       # Vitest (unit tests)
+```
 
 ---
 
@@ -150,10 +155,18 @@ Card data is stored **denormalized** in `CardSlot` (id, name, image URL, set nam
 
 The app is designed for [Vercel](https://vercel.com) + [Neon](https://neon.tech):
 
-1. Push to GitHub
-2. Import the repo in Vercel
-3. Add all environment variables from `.env.local`
-4. Deploy
+1. Push to GitHub. CI (`.github/workflows/ci.yml`) runs lint, typecheck, tests,
+   and a production build on every PR and on `master`.
+2. Import the repo in Vercel.
+3. Add the environment variables from [`.env.example`](./.env.example) in the
+   Vercel project settings.
+4. Apply migrations against the production database: `npx prisma migrate deploy`
+   (run with the production `DATABASE_URL`).
+5. Deploy.
+
+Security headers (HSTS, `X-Content-Type-Options`, `X-Frame-Options`,
+`Referrer-Policy`, `Permissions-Policy`, and a baseline CSP) are set in
+`next.config.ts` and apply in production over HTTPS.
 
 ---
 
