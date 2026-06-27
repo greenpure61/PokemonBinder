@@ -259,12 +259,14 @@ export function CardSearchPanel() {
     return { owned: Math.min(owned, total), total, pct: Math.min(100, Math.round((owned / total) * 100)) };
   }, [selectedSetId, sets, ownedCardIds]);
 
+  // Initial load on mount. These are Zustand actions with stable identities,
+  // so listing them as deps satisfies exhaustive-deps without re-running.
   useEffect(() => {
     fetchResults();
     loadSets();
     loadRarities();
     loadOwnedCards();
-  }, []);
+  }, [fetchResults, loadSets, loadRarities, loadOwnedCards]);
 
   function handleLanguageChange(l: "en" | "ja") {
     if (l === language) return;
