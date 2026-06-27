@@ -99,17 +99,32 @@ green._
 > and fill in the `// seam:` in `observability.ts` (plus a client SDK init for
 > browser errors). The logging/context plumbing is already in place.
 
-## Phase 4 — Hardening & hygiene · ~half day
+## Phase 4 — Hardening & hygiene · ~half day · ✅ DONE
 
-- [ ] **Security headers** in `next.config.ts` (CSP, frame-ancestors,
-      `Referrer-Policy`, HSTS). None are set today.
-- [ ] **Trim `images.remotePatterns`** — `next.config.ts` still allows
-      `images.pokemontcg.io` and `images.scrydex.com`, but the app moved to
-      TCGdex (`pokemontcg.ts:6`). Drop the unused hosts.
-- [ ] **Deployment docs** — `.env.example` + a short deploy/runbook in the README
-      (`prisma migrate deploy`, required env vars).
-- [ ] **DB indexing review** — confirm indexes back hot query paths (e.g. the
-      per-binder slot count aggregation in `binders/route.ts:27`).
+- [x] **Security headers** in `next.config.ts` (applied to all routes): HSTS,
+      `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`,
+      `Permissions-Policy`, and a baseline CSP (`base-uri`, `object-src 'none'`,
+      `frame-ancestors 'none'`). A strict nonce-based `script-src`/`style-src`
+      CSP is deliberately deferred — it needs a `proxy.ts` (Next 16) + browser
+      testing against framer-motion / recharts / html2canvas inline styles.
+- [x] **Trim `images.remotePatterns`** — dropped `images.pokemontcg.io` and
+      `images.scrydex.com`; kept `assets.tcgdex.net` (card art) and
+      `lh3.googleusercontent.com` (Google avatars). Verified via a read-only DB
+      query that **zero** stored images reference the removed hosts.
+- [x] **Deployment docs** — added `.env.example` (matches `src/lib/env.ts`) and
+      refreshed the README's Prerequisites / Setup / Scripts / Deployment
+      sections (removed the stale `POKEMONTCG_API_KEY`, corrected the data
+      source to TCGdex, documented `prisma migrate deploy` + CI).
+- [x] **DB indexing review** — existing `@@index`es cover the hot paths
+      (`Binder.userId`, `BinderPage.binderId`, `CardSlot.pageId`,
+      `WishlistItem.userId`). No new index added: the per-binder/owned-card/stats
+      aggregations filter `CardSlot.cardId IS NOT NULL` after joining via the
+      `pageId` index, and at current scale a partial index would be premature.
+- [x] **CI hygiene** — bumped `actions/checkout` and `actions/setup-node` to v5,
+      clearing the Node 20 runner deprecation warning.
+
+_Verified locally: 63 tests pass, `typecheck` clean, `lint` clean, `next build`
+green (security headers + trimmed image hosts confirmed in the build config)._
 
 ---
 
