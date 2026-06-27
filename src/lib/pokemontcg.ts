@@ -48,7 +48,7 @@ interface TCGFullCard extends TCGBriefCard {
 }
 
 // Card id is `${setId}-${localId}`; the set id is everything before the last dash.
-function setIdFromCardId(id: string): string {
+export function setIdFromCardId(id: string): string {
   const i = id.lastIndexOf("-");
   return i > 0 ? id.slice(0, i) : id;
 }
@@ -57,7 +57,7 @@ function setIdFromCardId(id: string): string {
 // cards. The brief /sets endpoint omits the series, so identify Pocket by set
 // id: its sets are "A1", "A1a", "A2"… and the promo "P-A" (no physical set uses
 // these). Matching by id is language-agnostic since ids don't get localized.
-function isPocketSetId(setId: string): boolean {
+export function isPocketSetId(setId: string): boolean {
   return /^A\d/.test(setId) || setId === "P-A";
 }
 
@@ -72,7 +72,7 @@ async function fetchRawSets(lang: Lang): Promise<TCGSetObject[]> {
 // that doesn't exist on physical cards — keep these out of the rarity filter.
 // Physical "Shiny rare"/"Shiny Ultra Rare" don't match the "<n> Shiny" pattern.
 const POCKET_RARITY = /^(one|two|three|four)\s+(diamond|star|shiny)$/i;
-function isPocketRarity(r: string): boolean {
+export function isPocketRarity(r: string): boolean {
   const t = r.trim();
   return t.toLowerCase() === "crown" || POCKET_RARITY.test(t);
 }
@@ -81,7 +81,7 @@ function emptySet(id: string): PokeTCGSet {
   return { id, name: "", series: "", printedTotal: 0, total: 0, releaseDate: "", images: { symbol: "", logo: "" } };
 }
 
-function normalizeSet(s: TCGSetObject): PokeTCGSet {
+export function normalizeSet(s: TCGSetObject): PokeTCGSet {
   return {
     id: s.id,
     name: s.name,
@@ -104,7 +104,7 @@ function normalizeBrief(c: TCGBriefCard, set: PokeTCGSet): PokeTCGCard {
   };
 }
 
-function normalizeFull(c: TCGFullCard): PokeTCGCard {
+export function normalizeFull(c: TCGFullCard): PokeTCGCard {
   const set = c.set ? normalizeSet(c.set) : emptySet(setIdFromCardId(c.id));
   return {
     id: c.id,
@@ -120,7 +120,7 @@ function normalizeFull(c: TCGFullCard): PokeTCGCard {
   };
 }
 
-function sortByNumber(cards: PokeTCGCard[]): PokeTCGCard[] {
+export function sortByNumber(cards: PokeTCGCard[]): PokeTCGCard[] {
   return [...cards].sort((a, b) => {
     const na = parseInt(a.number ?? "", 10);
     const nb = parseInt(b.number ?? "", 10);
