@@ -6,6 +6,7 @@ import {
   normalizeSet,
   normalizeFull,
   sortByNumber,
+  pokemontcgFallbackImages,
 } from "./pokemontcg";
 
 describe("setIdFromCardId", () => {
@@ -136,9 +137,50 @@ describe("normalizeFull", () => {
     expect(card.set.name).toBe("");
   });
 
-  it("produces empty image urls when the card has no image", () => {
-    const card = normalizeFull({ id: "x-1", name: "Card" });
+  it("falls back to PokéTCG image urls when the card has no image", () => {
+    const card = normalizeFull({ id: "svp-102", name: "Oddish" });
+    expect(card.images).toEqual({
+      small: "https://images.pokemontcg.io/svp/102.png",
+      large: "https://images.pokemontcg.io/svp/102_hires.png",
+    });
+  });
+
+  it("uses the localId for the fallback number when present", () => {
+    const card = normalizeFull({ id: "svp-102", localId: "102", name: "Oddish" });
+    expect(card.images.small).toBe("https://images.pokemontcg.io/svp/102.png");
+  });
+
+  it("yields empty image urls when there is no image and no derivable number", () => {
+    const card = normalizeFull({ id: "promo", name: "Card" });
     expect(card.images).toEqual({ small: "", large: "" });
+  });
+});
+
+describe("pokemontcgFallbackImages", () => {
+  it("builds small/large PokéTCG CDN urls from id + number", () => {
+    expect(pokemontcgFallbackImages("svp-102", "102")).toEqual({
+      small: "https://images.pokemontcg.io/svp/102.png",
+      large: "https://images.pokemontcg.io/svp/102_hires.png",
+    });
+  });
+
+  it("parses the number from the id when none is given", () => {
+    expect(pokemontcgFallbackImages("svp-85", undefined).small).toBe("https://images.pokemontcg.io/svp/85.png");
+  });
+
+  it("strips leading zeros from numeric numbers (PokéTCG CDN doesn't pad)", () => {
+    expect(pokemontcgFallbackImages("svp-085", "085")).toEqual({
+      small: "https://images.pokemontcg.io/svp/85.png",
+      large: "https://images.pokemontcg.io/svp/85_hires.png",
+    });
+  });
+
+  it("preserves alphanumeric numbers like TG01", () => {
+    expect(pokemontcgFallbackImages("swsh11tg-TG01", "TG01").small).toBe("https://images.pokemontcg.io/swsh11tg/TG01.png");
+  });
+
+  it("returns empty urls for an id with no number segment", () => {
+    expect(pokemontcgFallbackImages("promo", undefined)).toEqual({ small: "", large: "" });
   });
 });
 

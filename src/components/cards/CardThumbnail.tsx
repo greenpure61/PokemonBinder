@@ -2,11 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { useDraggable } from "@dnd-kit/core";
-import Image from "next/image";
 import { Check } from "lucide-react";
 import type { PokeTCGCard } from "@/types/pokemontcg";
 import type { DragItem } from "@/types/dnd";
 import { cn } from "@/lib/utils";
+import { CardImage } from "@/components/cards/CardImage";
 
 interface Props {
   card: PokeTCGCard;
@@ -54,20 +54,15 @@ export function CardThumbnail({ card, onZoom, isOwned }: Props) {
         isDragging && "scale-95 opacity-30"
       )}
     >
-      {card.images.small ? (
-        <Image
-          src={card.images.small}
-          alt={card.name}
-          fill
-          sizes="100px"
-          className="select-none object-cover"
-          draggable={false}
-        />
-      ) : (
-        <div className="absolute inset-0 flex items-center justify-center p-1.5 text-center">
-          <span className="text-[9px] leading-tight text-muted">{card.name}</span>
-        </div>
-      )}
+      <CardImage
+        src={card.images.small}
+        alt={card.name}
+        name={card.name}
+        sizes="100px"
+        className="select-none object-cover"
+        nameClassName="text-[9px]"
+        draggable={false}
+      />
 
       {/* Owned badge */}
       {isOwned && (

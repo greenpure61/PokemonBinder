@@ -1,7 +1,7 @@
 // Card data source: TCGdex (https://api.tcgdex.net/v2) — multilingual Pokémon TCG API.
 // Responses are normalized into the app's internal PokeTCG* shapes (see types/pokemontcg.ts),
 // which keep their historical names but are now source-agnostic.
-import type { CardSearchParams, PokeTCGCard, PokeTCGResponse, PokeTCGSet, PokeTCGSetsResponse } from "@/types/pokemontcg";
+import type { CardSearchParams, PokeTCGCard, PokeTCGCardImages, PokeTCGResponse, PokeTCGSet, PokeTCGSetsResponse } from "@/types/pokemontcg";
 
 const BASE = "https://api.tcgdex.net/v2";
 const REVALIDATE = 3600;
@@ -17,6 +17,28 @@ function cardImage(base: string | undefined, quality: "low" | "high"): string {
 }
 function assetImage(base: string | undefined): string {
   return base ? `${base}.webp` : "";
+}
+
+// TCGdex lacks images for some cards (mostly promos). Card ids share the
+// `{setId}-{number}` shape with the PokéTCG image CDN for the affected sets, so
+// we can derive a fallback URL deterministically — no extra request. If even
+// this 404s, the <CardImage> component degrades to a name placeholder.
+export function pokemontcgFallbackImages(id: string, number: string | undefined): PokeTCGCardImages {
+  const setId = setIdFromCardId(id);
+  const raw = number ?? id.slice(id.lastIndexOf("-") + 1);
+  if (!raw || raw === id) return { small: "", large: "" };
+  // The PokéTCG CDN doesn't zero-pad purely-numeric filenames (TCGdex's "085"
+  // maps to "85.png"), but it preserves alphanumeric numbers (e.g. "TG01").
+  const num = /^\d+$/.test(raw) ? String(parseInt(raw, 10)) : raw;
+  const base = `https://images.pokemontcg.io/${setId}/${num}`;
+  return { small: `${base}.png`, large: `${base}_hires.png` };
+}
+
+// Prefer the TCGdex image; fall back to the PokéTCG CDN when TCGdex has none.
+function buildImages(base: string | undefined, id: string, number: string | undefined): PokeTCGCardImages {
+  return base
+    ? { small: cardImage(base, "low"), large: cardImage(base, "high") }
+    : pokemontcgFallbackImages(id, number);
 }
 
 const CATEGORY_TO_SUPERTYPE: Record<string, string> = { Pokemon: "Pokémon", Trainer: "Trainer", Energy: "Energy" };
@@ -98,7 +120,7 @@ function normalizeBrief(c: TCGBriefCard, set: PokeTCGSet): PokeTCGCard {
     id: c.id,
     name: c.name,
     supertype: "",
-    images: { small: cardImage(c.image, "low"), large: cardImage(c.image, "high") },
+    images: buildImages(c.image, c.id, c.localId),
     set,
     number: c.localId,
   };
@@ -112,7 +134,7 @@ export function normalizeFull(c: TCGFullCard): PokeTCGCard {
     supertype: c.category ? (CATEGORY_TO_SUPERTYPE[c.category] ?? c.category) : "",
     types: c.types,
     rarity: c.rarity,
-    images: { small: cardImage(c.image, "low"), large: cardImage(c.image, "high") },
+    images: buildImages(c.image, c.id, c.localId),
     set,
     number: c.localId,
     artist: c.illustrator,
