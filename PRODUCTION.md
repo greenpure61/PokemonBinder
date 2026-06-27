@@ -73,12 +73,31 @@ wishlist/slot bodies) still pass the new validation._
 - [ ] **Payload caps** on mutation routes (max binder pages, max slots per
       request) — partly covered in Phase 1.
 
-## Phase 3 — Observability · ~half day
+## Phase 3 — Observability · ~half day · ✅ DONE
 
-- [ ] **Error tracking** (Sentry for Next.js, or equivalent) wired into the
-      Phase 1 error wrapper so server 500s and client errors are captured.
-- [ ] **Structured logging** for route handlers (request id, userId, latency).
-      There is no API-layer logging today.
+Chosen approach: **provider-agnostic seam** (no external SaaS yet) — structured
+logging now, with a single hook ready to forward to Sentry/Axiom/etc.
+
+- [x] **Structured logging** for route handlers — `withApiHandler` establishes a
+      per-request context (`src/lib/requestContext.ts`, via `AsyncLocalStorage`)
+      and logs every request's outcome (`method`, `path`, `status`, latency `ms`)
+      with a `requestId` and the authenticated `userId`. Logger emits one JSON
+      object per line (`src/lib/logger.ts`); responses carry an `x-request-id`
+      header for correlation.
+- [x] **Error tracking seam** — unexpected errors go through `reportError`
+      (`src/lib/observability.ts`), which logs with full context today and has a
+      marked `// seam:` for forwarding to an external tracker once a provider/DSN
+      is configured. Client-side error capture is deferred until a provider is
+      wired (it needs that SDK).
+- [x] **Tests** — `logger.test.ts` + `observability.test.ts`; `api.test.ts`
+      extended for the `x-request-id` header. 56 → 63 tests.
+
+_Verified locally: 63 tests pass, `typecheck` clean, `lint` clean, `next build`
+green._
+
+> To activate an external tracker later: pick a provider, add its SDK + DSN env,
+> and fill in the `// seam:` in `observability.ts` (plus a client SDK init for
+> browser errors). The logging/context plumbing is already in place.
 
 ## Phase 4 — Hardening & hygiene · ~half day
 
