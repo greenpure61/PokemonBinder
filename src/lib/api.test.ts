@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { z } from "zod";
 import type { Session } from "next-auth";
 
@@ -9,6 +9,13 @@ import { getServerSession } from "next-auth/next";
 import { ApiError, parseBody, parseQuery, requireUserId, withApiHandler } from "./api";
 
 const getSession = vi.mocked(getServerSession);
+
+// Quiet the structured request logs emitted by withApiHandler.
+beforeEach(() => {
+  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+});
+afterEach(() => vi.restoreAllMocks());
 
 function postRequest(body: unknown): Request {
   return new Request("http://test/api", {
@@ -96,6 +103,17 @@ describe("withApiHandler", () => {
     expect(res.status).toBe(500);
     await expect(res.json()).resolves.toEqual({ error: "Internal server error" });
     expect(errorSpy).toHaveBeenCalled();
-    errorSpy.mockRestore();
+  });
+
+  it("tags responses with an x-request-id correlation header", async () => {
+    const okHandler = withApiHandler(async () => Response.json({ ok: true }));
+    const okRes = await okHandler(new Request("http://test/api"), undefined);
+    expect(okRes.headers.get("x-request-id")).toBeTruthy();
+
+    const errHandler = withApiHandler(async () => {
+      throw new ApiError(404, "Not found");
+    });
+    const errRes = await errHandler(new Request("http://test/api"), undefined);
+    expect(errRes.headers.get("x-request-id")).toBeTruthy();
   });
 });

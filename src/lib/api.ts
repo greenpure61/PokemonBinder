@@ -2,6 +2,9 @@ import { getServerSession } from "next-auth/next";
 import { NextResponse } from "next/server";
 import { ZodError, type ZodType, type z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { logger } from "@/lib/logger";
+import { reportError } from "@/lib/observability";
+import { runWithRequestContext, setRequestUserId } from "@/lib/requestContext";
 
 /**
  * An error with an associated HTTP status. Throw this from a route handler (or
@@ -29,6 +32,7 @@ function formatZodError(error: ZodError): string {
 export async function requireUserId(): Promise<string> {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) throw new ApiError(401, "Unauthorized");
+  setRequestUserId(session.user.id);
   return session.user.id;
 }
 
@@ -55,24 +59,52 @@ export function parseQuery<S extends ZodType>(req: Request, schema: S): z.infer<
 
 type RouteHandler<C> = (req: Request, ctx: C) => Promise<Response> | Response;
 
+function jsonError(message: string, status: number, requestId: string): NextResponse {
+  return NextResponse.json({ error: message }, { status, headers: { "x-request-id": requestId } });
+}
+
 /**
- * Wraps a route handler with consistent error handling: ApiError and ZodError
- * map to their proper status codes, and anything unexpected is logged and
- * returned as a generic 500 (no internals leaked to the client).
+ * Wraps a route handler with consistent error handling and observability:
+ * - establishes a per-request context (request id, later the user id) so logs
+ *   are correlated,
+ * - logs every request's outcome (method, path, status, latency),
+ * - maps ApiError / ZodError to their status codes, and reports anything
+ *   unexpected via `reportError` before returning a generic 500 (no internals
+ *   leaked to the client).
  */
 export function withApiHandler<C = unknown>(handler: RouteHandler<C>): RouteHandler<C> {
-  return async (req, ctx) => {
-    try {
-      return await handler(req, ctx);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        return NextResponse.json({ error: err.message }, { status: err.status });
+  return (req, ctx) => {
+    const requestId = crypto.randomUUID();
+    return runWithRequestContext({ requestId }, async () => {
+      const start = Date.now();
+      const method = req.method;
+      const path = new URL(req.url).pathname;
+
+      try {
+        const res = await handler(req, ctx);
+        try {
+          res.headers.set("x-request-id", requestId);
+        } catch {
+          // Some Response instances have immutable headers; correlation id is best-effort.
+        }
+        logger.info("request.completed", { method, path, status: res.status, ms: Date.now() - start });
+        return res;
+      } catch (err) {
+        const ms = Date.now() - start;
+
+        if (err instanceof ApiError) {
+          logger.warn("request.failed", { method, path, status: err.status, ms, error: err.message });
+          return jsonError(err.message, err.status, requestId);
+        }
+        if (err instanceof ZodError) {
+          const message = formatZodError(err);
+          logger.warn("request.failed", { method, path, status: 400, ms, error: message });
+          return jsonError(message, 400, requestId);
+        }
+
+        reportError(err, { method, path, status: 500, ms });
+        return jsonError("Internal server error", 500, requestId);
       }
-      if (err instanceof ZodError) {
-        return NextResponse.json({ error: formatZodError(err) }, { status: 400 });
-      }
-      console.error("[api] Unhandled error:", err);
-      return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-    }
+    });
   };
 }
