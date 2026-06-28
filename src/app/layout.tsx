@@ -28,8 +28,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${jakarta.variable} h-full`}>
-      <body className="min-h-full antialiased">
+    // suppressHydrationWarning: the WebView / browser injects inline styles on the
+    // root before React hydrates (e.g. --safe-area-inset-* custom properties), which
+    // our SSR output can't match. This only suppresses attribute warnings on these
+    // elements themselves, not their children.
+    <html lang="en" className={`${jakarta.variable} h-full`} suppressHydrationWarning>
+      <body className="min-h-full antialiased" suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -19,6 +19,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Dev-only: allow the Android emulator (which reaches the host dev server at
+  // http://10.0.2.2:3000) to load /_next/* dev resources. Ignored in production.
+  allowedDevOrigins: ["10.0.2.2"],
   images: {
     remotePatterns: [
       // Card art (TCGdex is the catalog source — see src/lib/pokemontcg.ts).

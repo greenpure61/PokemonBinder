@@ -10,6 +10,7 @@ import type { BinderWithPages } from "@/types/binder";
 import { useUIStore } from "@/store/uiStore";
 import { useBinderStore } from "@/store/binderStore";
 import { IconButton } from "@/components/ui/IconButton";
+import { nativeGoogleSignOut } from "@/lib/nativeAuth";
 
 interface Props {
   binder: BinderWithPages;
@@ -169,7 +170,10 @@ export function TopNav({ binder, isDirty, isSaving }: Props) {
                       Dashboard
                     </Link>
                     <button
-                      onClick={() => signOut({ callbackUrl: "/login" })}
+                      onClick={async () => {
+                        await nativeGoogleSignOut();
+                        signOut({ callbackUrl: "/login" });
+                      }}
                       className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-sm text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
                     >
                       <LogOut className="h-4 w-4" />

@@ -109,6 +109,8 @@ export function CardSlotFlat({ pageId, slotIndex, slot, priority, editable = tru
         className={cn(
           "group relative h-full w-full rounded-lg transition-all duration-150",
           isOver && "scale-[1.03] ring-2 ring-primary",
+          // When a card is armed, filled slots are tap-to-replace targets too.
+          editable && armed && hasCard && "cursor-pointer ring-2 ring-primary/40",
           isDragging && "opacity-30"
         )}
       >
@@ -117,7 +119,11 @@ export function CardSlotFlat({ pageId, slotIndex, slot, priority, editable = tru
             {...listeners}
             {...attributes}
             className="relative h-full w-full cursor-grab touch-none select-none [-webkit-touch-callout:none] active:cursor-grabbing"
-            onClick={() => onZoom(slot!.cardId!, slot!.cardName ?? "", slot!.cardImageSmall ?? "")}
+            onClick={() =>
+              editable && armed && onPlace
+                ? onPlace(pageId, slotIndex) // replace the existing card with the armed one
+                : onZoom(slot!.cardId!, slot!.cardName ?? "", slot!.cardImageSmall ?? "")
+            }
           >
             <CardImage
               src={slot!.cardImageSmall ?? ""}
