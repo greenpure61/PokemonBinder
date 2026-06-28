@@ -33,7 +33,7 @@ export function EditorLayout({ topNav, leftSidebar, children, rightSidebar }: Pr
   }, []);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="flex h-dvh flex-col overflow-hidden bg-background">
       {topNav}
       <div className="relative flex flex-1 overflow-hidden">
         {/* Left sidebar — desktop animated width */}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { AnimatePresence, motion } from "framer-motion";
-import { Plus, X, Star, Eye, Trash2 } from "lucide-react";
+import { Plus, X, Star, Eye, Trash2, MoreHorizontal } from "lucide-react";
 import type { CardSlot } from "@prisma/client";
 import type { DragItem } from "@/types/dnd";
 import { useToast } from "@/components/ui/Toast";
@@ -15,11 +15,14 @@ interface Props {
   slotIndex: number;
   slot: CardSlot | undefined;
   priority?: boolean;
+  editable?: boolean;
+  armed?: boolean;
+  onPlace?: (pageId: string, slotIndex: number) => void;
   onZoom: (cardId: string, cardName: string, cardImageSmall: string) => void;
   onRemove: (pageId: string, slotIndex: number) => void;
 }
 
-export function CardSlotFlat({ pageId, slotIndex, slot, priority, onZoom, onRemove }: Props) {
+export function CardSlotFlat({ pageId, slotIndex, slot, priority, editable = true, armed, onPlace, onZoom, onRemove }: Props) {
   const hasCard = !!slot?.cardId;
   const dropId = `drop-${pageId}-${slotIndex}`;
   const dragId = `slot-${pageId}-${slotIndex}`;
@@ -66,10 +69,20 @@ export function CardSlotFlat({ pageId, slotIndex, slot, priority, onZoom, onRemo
     return () => document.removeEventListener("mousedown", handleClick);
   }, [menu]);
 
+  // Position the menu near a point, clamped so it never spills off a small screen.
+  function openMenuAt(x: number, y: number) {
+    const MENU_W = 176;
+    const MENU_H = 150;
+    const PAD = 8;
+    const cx = Math.min(Math.max(x, PAD), window.innerWidth - MENU_W - PAD);
+    const cy = y + MENU_H + PAD > window.innerHeight ? Math.max(PAD, y - MENU_H) : y;
+    setMenu({ x: cx, y: cy });
+  }
+
   function handleContextMenu(e: React.MouseEvent) {
-    if (!hasCard) return;
+    if (!hasCard || !editable) return;
     e.preventDefault();
-    setMenu({ x: e.clientX, y: e.clientY });
+    openMenuAt(e.clientX, e.clientY);
   }
 
   async function addToWishlist() {
@@ -116,26 +129,48 @@ export function CardSlotFlat({ pageId, slotIndex, slot, priority, onZoom, onRemo
               draggable={false}
               priority={priority}
             />
-            <button
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemove(pageId, slotIndex);
-              }}
-              className="absolute right-1 top-1 z-10 rounded-full bg-white/90 p-1 text-slate-600 opacity-0 shadow-md transition-opacity hover:bg-white hover:text-danger group-hover:opacity-100"
-              aria-label="Remove card"
-            >
-              <X className="h-3 w-3" strokeWidth={2.5} />
-            </button>
+            {editable && (
+              <>
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemove(pageId, slotIndex);
+                  }}
+                  className="absolute right-1 top-1 z-10 rounded-full bg-white/90 p-1 text-slate-600 opacity-0 shadow-md transition-opacity hover:bg-white hover:text-danger group-hover:opacity-100"
+                  aria-label="Remove card"
+                >
+                  <X className="h-3 w-3" strokeWidth={2.5} />
+                </button>
+                {/* Actions menu trigger — always visible on touch (which has no hover or
+                    right-click), hover-revealed on desktop. Opens the wishlist/view/remove menu. */}
+                <button
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const r = e.currentTarget.getBoundingClientRect();
+                    openMenuAt(r.left, r.bottom + 4);
+                  }}
+                  className="absolute left-1 top-1 z-10 rounded-full bg-white/90 p-1 text-slate-600 opacity-0 shadow-md transition-opacity hover:bg-white hover:text-foreground group-hover:opacity-100 pointer-coarse:opacity-100"
+                  aria-label="Card actions"
+                >
+                  <MoreHorizontal className="h-3 w-3" strokeWidth={2.5} />
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <div
+            onClick={editable && armed && onPlace ? () => onPlace(pageId, slotIndex) : undefined}
+            role={editable && armed && onPlace ? "button" : undefined}
+            aria-label={editable && armed && onPlace ? "Place card here" : undefined}
             className={cn(
               "flex h-full w-full items-center justify-center rounded-lg border-2 border-dashed transition-colors",
-              isOver ? "border-primary bg-primary-soft" : "border-border"
+              isOver || (editable && armed) ? "border-primary bg-primary-soft" : "border-border",
+              editable && armed && "cursor-pointer"
             )}
           >
-            <Plus className="h-5 w-5 select-none text-subtle" />
+            {editable && <Plus className={cn("h-5 w-5 select-none", armed ? "text-primary" : "text-subtle")} />}
           </div>
         )}
       </div>

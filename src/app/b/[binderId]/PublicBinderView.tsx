@@ -31,7 +31,7 @@ export function PublicBinderView({ binder }: Props) {
   const rightPage = binder.pages[currentSpreadIndex * 2 + 1];
 
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="flex h-dvh flex-col bg-background">
       <header className="flex flex-shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <Link href="/" className="flex flex-shrink-0 items-center gap-2">
@@ -62,6 +62,7 @@ export function PublicBinderView({ binder }: Props) {
           layout={binder.pocketLayout}
           spreadIndex={currentSpreadIndex}
           pageCount={binder.pageCount}
+          editable={false}
           onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
           onRemove={() => {}}
         />
