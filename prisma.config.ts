@@ -8,7 +8,11 @@ if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 export default defineConfig({
   schema: "./prisma/schema.prisma",
   datasource: {
-    url: process.env.DATABASE_URL!,
+    // Migrations need a *direct* (unpooled) connection: DDL and Prisma migrate
+    // don't work through PgBouncer's transaction pooler, which DATABASE_URL points
+    // at in production (see .env.example). Falls back to DATABASE_URL for local/dev
+    // setups that use a single, non-pooled database.
+    url: process.env.DIRECT_URL ?? process.env.DATABASE_URL!,
   },
   migrations: {
     path: "./prisma/migrations",

@@ -150,10 +150,19 @@ The app is designed for [Vercel](https://vercel.com) + [Neon](https://neon.tech)
    and a production build on every PR and on `master`.
 2. Import the repo in Vercel.
 3. Add the environment variables from [`.env.example`](./.env.example) in the
-   Vercel project settings.
-4. Apply migrations against the production database: `npx prisma migrate deploy`
-   (run with the production `DATABASE_URL`).
-5. Deploy.
+   Vercel project settings:
+   - **`DATABASE_URL`** — Neon's **pooled** connection string (host contains
+     `-pooler`). Serverless functions open many connections, so a non-pooled URL
+     will exhaust Postgres under load.
+   - **`DIRECT_URL`** — Neon's **direct** (non-pooled) string, for migrations.
+   - **`NEXTAUTH_URL`** — your production `https://` domain.
+   - `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`.
+4. In the Google OAuth client, add the production redirect URI
+   `https://<your-domain>/api/auth/callback/google` (and the domain to Authorized
+   JavaScript origins).
+5. Apply migrations against the production database: `npx prisma migrate deploy`
+   (run with the production `DIRECT_URL` set).
+6. Deploy.
 
 Security headers (HSTS, `X-Content-Type-Options`, `X-Frame-Options`,
 `Referrer-Policy`, `Permissions-Policy`, and a baseline CSP) are set in
