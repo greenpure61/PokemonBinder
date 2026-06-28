@@ -15,8 +15,10 @@ import {
 import { snapCenterToCursor } from "@dnd-kit/modifiers";
 import Image from "next/image";
 import { useBinderStore } from "@/store/binderStore";
+import { useUIStore } from "@/store/uiStore";
 import { useBinderPersist } from "@/hooks/useBinderPersist";
 import { useBinder } from "@/hooks/useBinderData";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { EditorLayout } from "@/components/layout/EditorLayout";
 import { TopNav } from "@/components/layout/TopNav";
 import { RightSidebar } from "@/components/layout/RightSidebar";
@@ -40,13 +42,18 @@ export function BinderEditor({ binderId }: Props) {
   const isDirty = useBinderStore((s) => s.isDirty);
   const isSaving = useBinderStore((s) => s.isSaving);
   const currentSpreadIndex = useBinderStore((s) => s.currentSpreadIndex);
+  const currentPageIndex = useBinderStore((s) => s.currentPageIndex);
   const goToSpread = useBinderStore((s) => s.goToSpread);
+  const goToPage = useBinderStore((s) => s.goToPage);
   const updateSlot = useBinderStore((s) => s.updateSlot);
   const swapSlots = useBinderStore((s) => s.swapSlots);
+  const armedCard = useBinderStore((s) => s.armedCard);
+  const armCard = useBinderStore((s) => s.armCard);
 
   const [activeDrag, setActiveDrag] = useState<DragItem | null>(null);
   const [zoomCard, setZoomCard] = useState<{ cardId: string; cardName: string; cardImageSmall: string } | null>(null);
   const flatRef = useRef<HTMLDivElement>(null);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   async function handleExport() {
     if (!flatRef.current) return;
@@ -82,6 +89,15 @@ export function BinderEditor({ binderId }: Props) {
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [binder, currentSpreadIndex, goToSpread]);
+
+  // Arming a card to place should reveal the binder: close the search drawer on
+  // mobile (where it's a full-screen overlay). On desktop the panel is a fixed sidebar.
+  useEffect(() => {
+    if (armedCard && !isDesktop) {
+      const ui = useUIStore.getState();
+      if (ui.leftSidebarOpen) ui.toggleLeftSidebar();
+    }
+  }, [armedCard, isDesktop]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -130,9 +146,16 @@ export function BinderEditor({ binderId }: Props) {
     }
   }
 
+  // Tap-to-place (touch): drop the armed search card into a tapped empty slot.
+  function handlePlace(pageId: string, slotIndex: number) {
+    if (!armedCard) return;
+    updateSlot(pageId, slotIndex, armedCard);
+    armCard(null);
+  }
+
   if (isLoading || !binder) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex min-h-dvh items-center justify-center bg-background">
         <Spinner className="h-8 w-8" />
       </div>
     );
@@ -140,6 +163,13 @@ export function BinderEditor({ binderId }: Props) {
 
   const leftPage = binder.pages[currentSpreadIndex * 2];
   const rightPage = binder.pages[currentSpreadIndex * 2 + 1];
+  const currentPage = binder.pages[currentPageIndex];
+
+  // Desktop shows the two-page spread and navigates spread-by-spread; phones show
+  // one page at a time (the spread is too wide to be usable) and navigate by page.
+  const navTotal = isDesktop ? Math.ceil(binder.pageCount / 2) : binder.pageCount;
+  const navCurrent = isDesktop ? currentSpreadIndex : currentPageIndex;
+  const navGo = isDesktop ? goToSpread : goToPage;
 
   return (
     <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd}>
@@ -149,35 +179,69 @@ export function BinderEditor({ binderId }: Props) {
         rightSidebar={<RightSidebar onExport={handleExport} />}
       >
         <div className="flex flex-col w-full flex-1 min-h-0 gap-3">
+          {armedCard && (
+            <div className="flex flex-shrink-0 items-center gap-2 rounded-xl border border-primary/30 bg-primary-soft px-3 py-2">
+              <div className="relative h-9 w-7 flex-shrink-0 overflow-hidden rounded bg-surface-muted">
+                {armedCard.cardImageSmall ? (
+                  <Image src={armedCard.cardImageSmall} alt="" fill sizes="28px" className="object-cover" />
+                ) : null}
+              </div>
+              <p className="min-w-0 flex-1 truncate text-xs text-foreground">
+                Placing <span className="font-semibold">{armedCard.cardName}</span> — tap an empty slot
+              </p>
+              <button
+                onClick={() => armCard(null)}
+                className="flex-shrink-0 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/10"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
           <div ref={flatRef} className="flex-1 min-h-0 flex">
-            <BinderPageFlat
-              leftPage={leftPage}
-              rightPage={rightPage}
-              layout={binder.pocketLayout}
-              spreadIndex={currentSpreadIndex}
-              pageCount={binder.pageCount}
-              onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
-              onRemove={(pageId, slotIndex) => updateSlot(pageId, slotIndex, null)}
-            />
+            {isDesktop ? (
+              <BinderPageFlat
+                leftPage={leftPage}
+                rightPage={rightPage}
+                layout={binder.pocketLayout}
+                spreadIndex={currentSpreadIndex}
+                pageCount={binder.pageCount}
+                armed={!!armedCard}
+                onPlace={handlePlace}
+                onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
+                onRemove={(pageId, slotIndex) => updateSlot(pageId, slotIndex, null)}
+              />
+            ) : (
+              <BinderPageFlat
+                single
+                leftPage={currentPage}
+                rightPage={undefined}
+                layout={binder.pocketLayout}
+                pageNumber={currentPageIndex + 1}
+                armed={!!armedCard}
+                onPlace={handlePlace}
+                onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
+                onRemove={(pageId, slotIndex) => updateSlot(pageId, slotIndex, null)}
+              />
+            )}
           </div>
 
-          {/* Bottom navigation */}
+          {/* Bottom navigation — spread-by-spread on desktop, page-by-page on mobile */}
           <div className="flex flex-shrink-0 items-center justify-center gap-3">
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => goToSpread(currentSpreadIndex - 1)}
-              disabled={currentSpreadIndex === 0}
+              onClick={() => navGo(navCurrent - 1)}
+              disabled={navCurrent === 0}
             >
               <ChevronLeft className="h-4 w-4" />
               Prev
             </Button>
-            <SpreadJump current={currentSpreadIndex} total={Math.ceil(binder.pageCount / 2)} onJump={goToSpread} />
+            <SpreadJump current={navCurrent} total={navTotal} onJump={navGo} label={isDesktop ? "Spread" : "Page"} />
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => goToSpread(currentSpreadIndex + 1)}
-              disabled={currentSpreadIndex >= Math.ceil(binder.pageCount / 2) - 1}
+              onClick={() => navGo(navCurrent + 1)}
+              disabled={navCurrent >= navTotal - 1}
             >
               Next
               <ChevronRight className="h-4 w-4" />
@@ -210,7 +274,7 @@ export function BinderEditor({ binderId }: Props) {
   );
 }
 
-function SpreadJump({ current, total, onJump }: { current: number; total: number; onJump: (i: number) => void }) {
+function SpreadJump({ current, total, onJump, label = "Spread" }: { current: number; total: number; onJump: (i: number) => void; label?: string }) {
   const [value, setValue] = useState(String(current + 1));
   const [editing, setEditing] = useState(false);
   const [trackedCurrent, setTrackedCurrent] = useState(current);
@@ -231,7 +295,7 @@ function SpreadJump({ current, total, onJump }: { current: number; total: number
 
   return (
     <span className="flex items-center gap-1.5 text-xs text-muted tabular-nums">
-      <span>Spread</span>
+      <span>{label}</span>
       <input
         value={value}
         onChange={(e) => setValue(e.target.value.replace(/[^0-9]/g, ""))}
@@ -241,7 +305,7 @@ function SpreadJump({ current, total, onJump }: { current: number; total: number
           if (e.key === "Enter") e.currentTarget.blur();
           if (e.key === "Escape") { setValue(String(current + 1)); e.currentTarget.blur(); }
         }}
-        aria-label="Jump to spread"
+        aria-label={`Jump to ${label.toLowerCase()}`}
         className="w-11 rounded-md border border-border bg-surface px-1 py-1 text-center text-foreground transition-colors focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/15"
       />
       <span>/ {total}</span>

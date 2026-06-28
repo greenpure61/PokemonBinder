@@ -9,11 +9,14 @@ interface PageProps {
   page: BinderPageWithSlots;
   layout: BinderLayout;
   pageNumber?: number;
+  editable?: boolean;
+  armed?: boolean;
+  onPlace?: (pageId: string, slotIndex: number) => void;
   onZoom: (cardId: string, cardName: string, cardImageSmall: string) => void;
   onRemove: (pageId: string, slotIndex: number) => void;
 }
 
-function SinglePage({ page, layout, pageNumber, onZoom, onRemove }: PageProps) {
+function SinglePage({ page, layout, pageNumber, editable, armed, onPlace, onZoom, onRemove }: PageProps) {
   const slotCount = getSlotsPerPage(layout);
   const cols = getGridCols(layout);
   const rows = getGridRows(layout);
@@ -36,6 +39,9 @@ function SinglePage({ page, layout, pageNumber, onZoom, onRemove }: PageProps) {
               slotIndex={i}
               slot={slot}
               priority={i === 0}
+              editable={editable}
+              armed={armed}
+              onPlace={onPlace}
               onZoom={onZoom}
               onRemove={onRemove}
             />
@@ -57,17 +63,43 @@ interface SpreadProps {
   layout: BinderLayout;
   spreadIndex?: number;
   pageCount?: number;
+  // Mobile: render only `leftPage` as a single, width-filling page.
+  single?: boolean;
+  pageNumber?: number;
+  // Editing affordances — off for the read-only public view.
+  editable?: boolean;
+  // Tap-to-place: a card is armed in search, so empty slots become drop targets.
+  armed?: boolean;
+  onPlace?: (pageId: string, slotIndex: number) => void;
   onZoom: (cardId: string, cardName: string, cardImageSmall: string) => void;
   onRemove: (pageId: string, slotIndex: number) => void;
 }
 
-export function BinderPageFlat({ leftPage, rightPage, layout, spreadIndex, pageCount, onZoom, onRemove }: SpreadProps) {
+export function BinderPageFlat({ leftPage, rightPage, layout, spreadIndex, pageCount, single, pageNumber, editable = true, armed, onPlace, onZoom, onRemove }: SpreadProps) {
+  const cols = getGridCols(layout);
+  const rows = getGridRows(layout);
+
+  // Mobile: one page per screen. Width derived from a single portrait page so the
+  // cards stay large and tappable instead of shrinking to fit a side-by-side spread.
+  if (single) {
+    const singleAR = cols / (rows * 1.4);
+    return (
+      <div className="flex min-h-0 flex-1 justify-center">
+        <div className="flex h-full min-h-0 max-w-full" style={{ aspectRatio: String(singleAR) }}>
+          {leftPage ? (
+            <SinglePage page={leftPage} layout={layout} pageNumber={pageNumber} editable={editable} armed={armed} onPlace={onPlace} onZoom={onZoom} onRemove={onRemove} />
+          ) : (
+            <div className="flex-1 rounded-2xl border border-border bg-surface-muted" />
+          )}
+        </div>
+      </div>
+    );
+  }
+
   const leftNum = spreadIndex != null ? spreadIndex * 2 + 1 : undefined;
   const rightNum = spreadIndex != null ? spreadIndex * 2 + 2 : undefined;
   const rightVisible = pageCount == null || rightNum == null || rightNum <= pageCount;
 
-  const cols = getGridCols(layout);
-  const rows = getGridRows(layout);
   // Derive width from height so cards always fit vertically without overflow.
   // Two portrait pages side-by-side: spread AR = (2 × cols) / (rows × card_AR)
   const spreadAR = (2 * cols) / (rows * 1.4);
@@ -78,7 +110,7 @@ export function BinderPageFlat({ leftPage, rightPage, layout, spreadIndex, pageC
       {/* Spread — height fills container, width derived from aspect ratio */}
       <div className="flex h-full min-h-0 max-w-full gap-2" style={{ aspectRatio: String(spreadAR) }}>
         {leftPage ? (
-          <SinglePage page={leftPage} layout={layout} pageNumber={leftNum} onZoom={onZoom} onRemove={onRemove} />
+          <SinglePage page={leftPage} layout={layout} pageNumber={leftNum} editable={editable} armed={armed} onPlace={onPlace} onZoom={onZoom} onRemove={onRemove} />
         ) : (
           <div className="flex-1 rounded-2xl border border-border bg-surface-muted" />
         )}
@@ -93,6 +125,9 @@ export function BinderPageFlat({ leftPage, rightPage, layout, spreadIndex, pageC
             page={rightPage}
             layout={layout}
             pageNumber={rightVisible ? rightNum : undefined}
+            editable={editable}
+            armed={armed}
+            onPlace={onPlace}
             onZoom={onZoom}
             onRemove={onRemove}
           />

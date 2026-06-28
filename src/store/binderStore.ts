@@ -23,6 +23,8 @@ function applyCardToPage(
 interface BinderState {
   binder: BinderWithPages | null;
   currentSpreadIndex: number;
+  currentPageIndex: number;
+  armedCard: SlotCard | null;
   isDirty: boolean;
   isSaving: boolean;
   dirtyPageIds: string[];
@@ -31,6 +33,8 @@ interface BinderState {
   swapSlots: (a: SlotRef, b: SlotRef) => void;
   clearAllSlots: () => void;
   goToSpread: (index: number) => void;
+  goToPage: (index: number) => void;
+  armCard: (card: SlotCard | null) => void;
   updateName: (name: string) => void;
   updateIsPublic: (isPublic: boolean) => void;
   setDirty: (v: boolean) => void;
@@ -41,11 +45,13 @@ interface BinderState {
 export const useBinderStore = create<BinderState>((set, get) => ({
   binder: null,
   currentSpreadIndex: 0,
+  currentPageIndex: 0,
+  armedCard: null,
   isDirty: false,
   isSaving: false,
   dirtyPageIds: [],
 
-  setBinder: (binder) => set({ binder, currentSpreadIndex: 0, isDirty: false, dirtyPageIds: [] }),
+  setBinder: (binder) => set({ binder, currentSpreadIndex: 0, currentPageIndex: 0, armedCard: null, isDirty: false, dirtyPageIds: [] }),
 
   updateSlot: (pageId, slotIndex, card) =>
     set((state) => {
@@ -115,8 +121,20 @@ export const useBinderStore = create<BinderState>((set, get) => ({
     const { binder } = get();
     if (!binder) return;
     const maxSpread = Math.ceil(binder.pageCount / 2) - 1;
-    set({ currentSpreadIndex: Math.max(0, Math.min(index, maxSpread)) });
+    const spread = Math.max(0, Math.min(index, maxSpread));
+    // Keep the page index in sync so switching to the mobile (one-page) view lands
+    // on the first page of the current spread.
+    set({ currentSpreadIndex: spread, currentPageIndex: spread * 2 });
   },
+
+  goToPage: (index) => {
+    const { binder } = get();
+    if (!binder) return;
+    const page = Math.max(0, Math.min(index, binder.pageCount - 1));
+    set({ currentPageIndex: page, currentSpreadIndex: Math.floor(page / 2) });
+  },
+
+  armCard: (armedCard) => set({ armedCard }),
 
   updateName: (name) => set((state) => ({
     binder: state.binder ? { ...state.binder, name } : null,
