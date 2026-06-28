@@ -9,6 +9,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { LibraryBig, Star, BarChart3, LogOut, ChevronDown } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
+import { nativeGoogleSignOut } from "@/lib/nativeAuth";
 
 const NAV = [
   { href: "/dashboard", label: "Binders", icon: LibraryBig, match: (p: string) => p === "/dashboard" },
@@ -87,7 +88,10 @@ export function AppHeader() {
                       <p className="truncate text-xs text-muted">{user.email}</p>
                     </div>
                     <button
-                      onClick={() => signOut({ callbackUrl: "/login" })}
+                      onClick={async () => {
+                        await nativeGoogleSignOut();
+                        signOut({ callbackUrl: "/login" });
+                      }}
                       className="flex w-full cursor-pointer items-center gap-2 px-4 py-2.5 text-sm text-muted transition-colors hover:bg-surface-muted hover:text-foreground"
                     >
                       <LogOut className="h-4 w-4" />

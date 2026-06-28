@@ -79,13 +79,16 @@ export function BinderPageFlat({ leftPage, rightPage, layout, spreadIndex, pageC
   const cols = getGridCols(layout);
   const rows = getGridRows(layout);
 
-  // Mobile: one page per screen. Width derived from a single portrait page so the
-  // cards stay large and tappable instead of shrinking to fit a side-by-side spread.
+  // Mobile: one page per screen. The page is portrait (AR < 1), so on a tall phone
+  // it's width-limited — drive the size from the available width (`w-full`) and let
+  // height follow the aspect ratio, capped by `max-h-full`. (Driving from height
+  // instead would transfer an over-wide min-width through the aspect ratio, which
+  // beats `max-width` and clips the page off the right edge.)
   if (single) {
     const singleAR = cols / (rows * 1.4);
     return (
-      <div className="flex min-h-0 flex-1 justify-center">
-        <div className="flex h-full min-h-0 max-w-full" style={{ aspectRatio: String(singleAR) }}>
+      <div className="flex min-h-0 min-w-0 flex-1 items-center justify-center">
+        <div className="flex w-full min-h-0 min-w-0 max-h-full" style={{ aspectRatio: String(singleAR) }}>
           {leftPage ? (
             <SinglePage page={leftPage} layout={layout} pageNumber={pageNumber} editable={editable} armed={armed} onPlace={onPlace} onZoom={onZoom} onRemove={onRemove} />
           ) : (

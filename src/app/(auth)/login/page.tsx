@@ -2,18 +2,39 @@
 
 import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Logo } from "@/components/layout/Logo";
 import { Spinner } from "@/components/ui/Spinner";
+import { isNativeApp, nativeGoogleSignIn } from "@/lib/nativeAuth";
 
 export default function LoginPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (session) router.push("/dashboard");
   }, [session, router]);
+
+  async function handleSignIn() {
+    setError(null);
+    // Web: the standard NextAuth redirect. Native: Google blocks in-WebView OAuth,
+    // so use the OS account picker and exchange the idToken for a session cookie.
+    if (!isNativeApp()) {
+      signIn("google", { callbackUrl: "/dashboard" });
+      return;
+    }
+    setBusy(true);
+    try {
+      const ok = await nativeGoogleSignIn(); // navigates to /dashboard on success
+      if (!ok) setBusy(false); // user cancelled the picker
+    } catch (e) {
+      setBusy(false);
+      setError(e instanceof Error ? e.message : "Sign-in failed. Please try again.");
+    }
+  }
 
   if (status === "loading") {
     return (
@@ -49,12 +70,15 @@ export default function LoginPage() {
           </div>
 
           <button
-            onClick={() => signIn("google", { callbackUrl: "/dashboard" })}
-            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-surface-muted active:scale-[0.99]"
+            onClick={handleSignIn}
+            disabled={busy}
+            className="flex w-full cursor-pointer items-center justify-center gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-surface-muted active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <GoogleIcon />
-            Continue with Google
+            {busy ? <Spinner className="h-5 w-5" /> : <GoogleIcon />}
+            {busy ? "Signing in…" : "Continue with Google"}
           </button>
+
+          {error && <p className="mt-3 text-center text-xs text-red-400">{error}</p>}
 
           <p className="mt-6 text-center text-xs text-subtle">By signing in, you agree to our terms of service.</p>
         </div>
