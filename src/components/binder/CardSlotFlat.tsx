@@ -116,7 +116,7 @@ export function CardSlotFlat({ pageId, slotIndex, slot, priority, editable = tru
           <div
             {...listeners}
             {...attributes}
-            className="relative h-full w-full cursor-grab active:cursor-grabbing"
+            className="relative h-full w-full cursor-grab touch-none select-none [-webkit-touch-callout:none] active:cursor-grabbing"
             onClick={() => onZoom(slot!.cardId!, slot!.cardName ?? "", slot!.cardImageSmall ?? "")}
           >
             <CardImage

@@ -73,6 +73,15 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* iOS Safari long-presses an image to "Save Image / Copy", which hijacks the
+   long-press gesture used to drag-rearrange cards. Suppress the callout and the
+   native image drag app-wide so the long-press reaches dnd-kit's touch sensor.
+   (Draggable card slots additionally set touch-action: none.) */
+img {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+}
+
 /* Visible, consistent keyboard focus everywhere */
 :focus-visible {
   outline: 2px solid var(--color-primary);
