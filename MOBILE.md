@@ -44,9 +44,9 @@ Ship PokemonBinder as a native phone app, **without rewriting** the existing app
 
 - [x] **Step 1 — Deploy to stable HTTPS + pooling** (PR #7)
 - [x] **Step 2 — Phone-ready UI** (PR #8, + iOS long-press fix #9)
-- [x] **Step 3 — Scaffold Capacitor (Android-first)** — scaffolded, builds, and runs on the emulator (login page renders in the WebView; hits the Google auth wall)
-- [ ] Step 4 — Native auth (Google sign-in out of the WebView) ← next, the hard part
-- [ ] Step 5 — Native plugins (share, haptics, push, camera)
+- [x] **Step 3 — Scaffold Capacitor (Android-first)** — scaffolded, builds, and runs on the emulator (login page renders in the WebView; hits the Google auth wall) (PR #10)
+- [x] **Step 4 — Native auth (Google sign-in out of the WebView)** — native account picker → idToken → session cookie; verified end-to-end on the emulator (PR #11)
+- [ ] Step 5 — Native plugins (share, haptics, push, camera) ← next
 - [ ] Step 6 — Deep links for `/b/[binderId]` sharing
 - [ ] Step 7 — Icons / splash / native config
 - [ ] Step 8 — Android build (local, Windows)
@@ -112,11 +112,15 @@ Fixed with `-webkit-touch-callout: none` / `-webkit-user-drag: none` on `img` +
 JAVA_HOME    = %ProgramFiles%\Android\Android Studio\jbr   (JDK 21.0.10)
 ANDROID_HOME = %LOCALAPPDATA%\Android\Sdk
 SDK tools added: cmdline-tools/latest, platform-tools, emulator,
-                 system-images;android-36;google_apis;x86_64
-AVD          = binder_pixel  (Pixel 7, android-36 google_apis x86_64)
+                 system-images;android-36;google_apis_playstore;x86_64
+AVD          = binder_play  (Pixel 7, android-36 google_apis_playstore x86_64)
+             (Play-Store image required: native Google sign-in needs Play Services
+              + a Google account added to the emulator. The old non-playstore
+              binder_pixel AVD + google_apis image were deleted to reclaim disk.)
 
 build   : cd android && ./gradlew :app:assembleDebug --no-daemon
-emulator: %ANDROID_HOME%\emulator\emulator.exe -avd binder_pixel -no-snapshot
+emulator: launch DETACHED (Start-Process), not via a tool that times out, or it
+          gets killed mid-session: emulator.exe -avd binder_play -no-snapshot
 install : %ANDROID_HOME%\platform-tools\adb.exe install -r \
           android/app/build/outputs/apk/debug/app-debug.apk
 launch  : adb shell monkey -p app.binder.mobile -c android.intent.category.LAUNCHER 1
@@ -124,6 +128,32 @@ launch  : adb shell monkey -p app.binder.mobile -c android.intent.category.LAUNC
 `java`/`adb` are not on PATH and `ANDROID_HOME` isn't a persistent env var — set
 them per-shell as above (or add them to the user env to make `npx cap run android`
 seamless).
+
+### Step 4 — Native Google sign-in ✅ (PR #11)
+- **Plugin:** `@capgo/capacitor-social-login` (Capacitor-8-ready, Android Credential
+  Manager — the modern, non-deprecated path; also covers Apple for the iOS step).
+  `@codetrix-studio/capacitor-google-auth` was rejected: peer `@capacitor/core ^6`.
+  Only the Google provider is bundled (`plugins.SocialLogin.providers` in
+  `capacitor.config.ts`; flags mirrored in `android/gradle.properties`).
+- **Flow (simpler than the bearer-token plan we'd sketched):** OS account picker →
+  Google `idToken` → `POST /api/auth/native` verifies it (`google-auth-library`,
+  audience = web client) → upserts user/account → creates a DB `Session` → sets the
+  NextAuth session cookie. Because we use **database sessions** and load our own site
+  in the WebView, the cookie makes SSR + every API route authenticate the app exactly
+  like the web — **no `requireUserId` change, no bearer tokens, no deep link needed.**
+- **`scopes` gotcha:** passing `scopes` to the plugin's Google `login()` throws
+  *"You CANNOT use scopes without modifying the main activity"* — omit them; the
+  idToken already carries email + basic profile.
+- **Dev loop:** point the emulator at the host dev server via
+  `CAP_SERVER_URL=http://10.0.2.2:3000 npx cap sync android` (override in
+  `capacitor.config.ts`; the generated native config is gitignored). Run `npm run
+  dev`, then build/install/launch. Re-sync without `CAP_SERVER_URL` for prod.
+- **Mobile editor fixes shipped alongside:** single binder page was clipped off the
+  right (height-driven → made width-driven); tap-to-place now replaces cards in
+  occupied slots; `suppressHydrationWarning` on the root (WebView injects
+  `--safe-area-inset-*` pre-hydration); `allowedDevOrigins` for the emulator host.
+- **⚠ Prod deploy needs `NEXT_PUBLIC_GOOGLE_CLIENT_ID`** (the web client ID) set in
+  Vercel env, or the native button has no client id to initialize with.
 
 ---
 
@@ -145,20 +175,27 @@ seamless).
 - **Vercel needs `postinstall: prisma generate`** or `next build` fails typecheck
   (`tx` implicitly any in the slots `$transaction`).
 - Use **`h-dvh`** not `h-screen` for full-height mobile layouts.
+- **Next dev server blocks the emulator's `/_next/*` requests** (cross-origin from
+  `10.0.2.2`) → blank/stuck page in the WebView. Fix: `allowedDevOrigins: ["10.0.2.2"]`
+  in `next.config.ts` (dev-only).
+- **Launch the emulator DETACHED.** A backgrounded tool command gets killed at its
+  timeout (~2 min), taking the emulator with it. Use `Start-Process` so it persists.
+- **Play-Store system images are large (~7 GB userdata needed).** Watch C: free
+  space; native Google sign-in requires a `google_apis_playstore` image (Play
+  Services) with a Google account added, not the plain `google_apis` image.
+- **@capgo social-login bundles all providers by default** — the Facebook SDK can
+  crash-on-launch via auto-init. Disable unused providers via
+  `plugins.SocialLogin.providers` in `capacitor.config.ts`.
 
 ---
 
-## Next session → Step 4 (Native auth — the hard part)
+## Next session → Step 5 (Native plugins)
 
-Step 3 is done; the emulator shows our login page but **can't get past Google
-sign-in** because the OAuth callback completes in the system browser, not the app
-(see the auth-wall finding above). Step 4 closes that loop:
-
-1. Native Google sign-in **out of the WebView** (system browser / native flow),
-   returning to the app via a deep link with an auth code/token — not relying on the
-   NextAuth cookie landing in the WebView.
-2. Teach `requireUserId` in `src/lib/api.ts` to accept a **bearer token** alongside
-   the existing cookie session, so the web app stays unchanged (the native shell
-   sends `Authorization: Bearer …`; web keeps using the NextAuth cookie).
-3. Candidate libs: `@capacitor-community/generic-oauth2` or
-   `@codetrix-studio/capacitor-google-auth` for the native sign-in half.
+Steps 1–4 done; the app installs, logs in natively, and is usable on the emulator.
+Step 5 adds native niceties (share, haptics, push, camera). Before that, two small
+loose ends worth a look:
+- **Public binder view** (`/b/[binderId]`) still uses the two-page spread on mobile —
+  give it the same single-page treatment as the editor (the `single` path already
+  exists in `BinderPageFlat`).
+- **Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in Vercel** before the next prod deploy, or
+  native sign-in won't initialize against the deployed site.
