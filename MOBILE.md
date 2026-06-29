@@ -1,7 +1,7 @@
 # Mobile App (Capacitor) — Progress Tracker
 
 Turning PokemonBinder into a phone app. This file tracks the plan, decisions, and
-status across work sessions. Last updated: **2026-06-28**.
+status across work sessions. Last updated: **2026-06-29**.
 
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done
 
@@ -46,7 +46,7 @@ Ship PokemonBinder as a native phone app, **without rewriting** the existing app
 - [x] **Step 2 — Phone-ready UI** (PR #8, + iOS long-press fix #9)
 - [x] **Step 3 — Scaffold Capacitor (Android-first)** — scaffolded, builds, and runs on the emulator (login page renders in the WebView; hits the Google auth wall) (PR #10)
 - [x] **Step 4 — Native auth (Google sign-in out of the WebView)** — native account picker → idToken → session cookie; verified end-to-end on the emulator (PR #11)
-- [ ] Step 5 — Native plugins (share, haptics, push, camera) ← next
+- [~] **Step 5 — Native plugins** — share + haptics done (+ Explore feed); push/camera deferred
 - [ ] Step 6 — Deep links for `/b/[binderId]` sharing
 - [ ] Step 7 — Icons / splash / native config
 - [ ] Step 8 — Android build (local, Windows)
@@ -155,6 +155,30 @@ seamless).
 - **⚠ Prod deploy needs `NEXT_PUBLIC_GOOGLE_CLIENT_ID`** (the web client ID) set in
   Vercel env, or the native button has no client id to initialize with.
 
+### Step 5 — Native plugins (share + haptics) + Explore feed ✅/🚧
+Scope locked to **share + haptics** this round; **push + camera deferred** (no
+backend/permissions appetite yet).
+- **Native share (`@capacitor/share`).** The editor's Share button already flips the
+  binder public; on native it now opens the **OS share sheet**
+  (`Share.share({title, text, url})`) instead of copying the link, then fires a
+  success haptic. Web is unchanged (clipboard copy). Verified on the emulator —
+  Android chooser opens with the correct `…/b/[id]` payload.
+- **Haptics (`@capacitor/haptics`).** `src/lib/haptics.ts` wraps `hapticImpact()` /
+  `hapticSuccess()` with a lazy import — **no-op on web**, so it's safe to call from
+  shared components. Wired into drag-start and tap-to-place in the editor, and the
+  native share confirmation.
+- **Explore feed (the "share to public → Instagram-style scroll" idea).** New
+  signed-in **Explore** tab (`/dashboard/explore`, Compass icon in `AppHeader`) shows
+  a vertical feed of every public binder, newest first: owner header + first-page
+  card-grid preview + layout/pages footer. Tapping a post opens the existing public
+  view (`/b/[id]`). Backed by `GET /api/explore` (`requireUserId` gate over public
+  binders; first-page slots only for the preview). Verified end-to-end on the
+  emulator — feed renders and tap-through lands on the public binder view (the
+  `/login`+`/dashboard` lines in the dev log are just Next.js **prefetches** of the
+  two links in the public view's header, not a redirect).
+- **Both share + the plugins need a fresh prod deploy *and* a rebuilt prod APK**
+  (native plugin code ships in the APK, not over the remote URL).
+
 ---
 
 ## Deferred (intentionally)
@@ -189,13 +213,16 @@ seamless).
 
 ---
 
-## Next session → Step 5 (Native plugins)
+## Next session → finish Step 5 / Step 6 (deep links)
 
-Steps 1–4 done; the app installs, logs in natively, and is usable on the emulator.
-Step 5 adds native niceties (share, haptics, push, camera). Before that, two small
-loose ends worth a look:
+Steps 1–4 done; Step 5 partially done (share + haptics + Explore feed). The app
+installs, logs in natively, shares to the OS sheet, and has a working Explore feed on
+the emulator. Open items:
+- **Deploy + rebuild prod APK** for the share/haptics/Explore changes (plugin code
+  lives in the APK; `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is already set in Vercel).
+- **Push + camera** (the deferred half of Step 5) if/when wanted.
+- **Step 6 — deep links** for `/b/[binderId]`: a shared link should reopen the app on
+  that binder instead of the browser.
 - **Public binder view** (`/b/[binderId]`) still uses the two-page spread on mobile —
-  give it the same single-page treatment as the editor (the `single` path already
-  exists in `BinderPageFlat`).
-- **Set `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in Vercel** before the next prod deploy, or
-  native sign-in won't initialize against the deployed site.
+  give it the same single-page treatment as the editor (`single` path exists in
+  `BinderPageFlat`).

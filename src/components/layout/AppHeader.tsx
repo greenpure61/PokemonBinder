@@ -6,13 +6,14 @@ import { usePathname } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LibraryBig, Star, BarChart3, LogOut, ChevronDown } from "lucide-react";
+import { LibraryBig, Compass, Star, BarChart3, LogOut, ChevronDown } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
 import { nativeGoogleSignOut } from "@/lib/nativeAuth";
 
 const NAV = [
   { href: "/dashboard", label: "Binders", icon: LibraryBig, match: (p: string) => p === "/dashboard" },
+  { href: "/dashboard/explore", label: "Explore", icon: Compass, match: (p: string) => p.startsWith("/dashboard/explore") },
   { href: "/dashboard/wishlist", label: "Wishlist", icon: Star, match: (p: string) => p.startsWith("/dashboard/wishlist") },
   { href: "/dashboard/stats", label: "Stats", icon: BarChart3, match: (p: string) => p.startsWith("/dashboard/stats") },
 ];

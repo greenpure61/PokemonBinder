@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
 import { useBinderStore } from "@/store/binderStore";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { BinderPageFlat } from "@/components/binder/BinderPageFlat";
 import { CardZoomModal } from "@/components/cards/CardZoomModal";
 import { Logo } from "@/components/layout/Logo";
@@ -18,8 +19,10 @@ interface Props {
 export function PublicBinderView({ binder }: Props) {
   const setBinder = useBinderStore((s) => s.setBinder);
   const goToSpread = useBinderStore((s) => s.goToSpread);
+  const goToPage = useBinderStore((s) => s.goToPage);
   const currentSpreadIndex = useBinderStore((s) => s.currentSpreadIndex);
-  const totalSpreads = Math.ceil(binder.pageCount / 2);
+  const currentPageIndex = useBinderStore((s) => s.currentPageIndex);
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
 
   const [zoomCard, setZoomCard] = useState<{ cardId: string; cardName: string; cardImageSmall: string } | null>(null);
 
@@ -29,6 +32,14 @@ export function PublicBinderView({ binder }: Props) {
 
   const leftPage = binder.pages[currentSpreadIndex * 2];
   const rightPage = binder.pages[currentSpreadIndex * 2 + 1];
+  const currentPage = binder.pages[currentPageIndex];
+
+  // Desktop shows the two-page spread and navigates spread-by-spread; phones show
+  // one page at a time (the spread overflows the viewport — clipping the page off
+  // the right and pushing the fixed zoom modal off-screen) and navigate by page.
+  const navTotal = isDesktop ? Math.ceil(binder.pageCount / 2) : binder.pageCount;
+  const navCurrent = isDesktop ? currentSpreadIndex : currentPageIndex;
+  const navGo = isDesktop ? goToSpread : goToPage;
 
   return (
     <div className="flex h-dvh flex-col bg-background">
@@ -56,36 +67,49 @@ export function PublicBinderView({ binder }: Props) {
       </header>
 
       <div className="flex min-h-0 flex-1 p-4">
-        <BinderPageFlat
-          leftPage={leftPage}
-          rightPage={rightPage}
-          layout={binder.pocketLayout}
-          spreadIndex={currentSpreadIndex}
-          pageCount={binder.pageCount}
-          editable={false}
-          onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
-          onRemove={() => {}}
-        />
+        {isDesktop ? (
+          <BinderPageFlat
+            leftPage={leftPage}
+            rightPage={rightPage}
+            layout={binder.pocketLayout}
+            spreadIndex={currentSpreadIndex}
+            pageCount={binder.pageCount}
+            editable={false}
+            onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
+            onRemove={() => {}}
+          />
+        ) : (
+          <BinderPageFlat
+            single
+            leftPage={currentPage}
+            rightPage={undefined}
+            layout={binder.pocketLayout}
+            pageNumber={currentPageIndex + 1}
+            editable={false}
+            onZoom={(cardId, cardName, cardImageSmall) => setZoomCard({ cardId, cardName, cardImageSmall })}
+            onRemove={() => {}}
+          />
+        )}
       </div>
 
       <div className="flex flex-shrink-0 items-center justify-center gap-4 border-t border-border bg-surface py-3">
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => goToSpread(currentSpreadIndex - 1)}
-          disabled={currentSpreadIndex === 0}
+          onClick={() => navGo(navCurrent - 1)}
+          disabled={navCurrent === 0}
         >
           <ChevronLeft className="h-4 w-4" />
           Prev
         </Button>
         <span className="text-xs text-muted tabular-nums">
-          {currentSpreadIndex + 1} / {totalSpreads}
+          {navCurrent + 1} / {navTotal}
         </span>
         <Button
           variant="secondary"
           size="sm"
-          onClick={() => goToSpread(currentSpreadIndex + 1)}
-          disabled={currentSpreadIndex >= totalSpreads - 1}
+          onClick={() => navGo(navCurrent + 1)}
+          disabled={navCurrent >= navTotal - 1}
         >
           Next
           <ChevronRight className="h-4 w-4" />

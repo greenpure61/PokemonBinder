@@ -10,7 +10,8 @@ import type { BinderWithPages } from "@/types/binder";
 import { useUIStore } from "@/store/uiStore";
 import { useBinderStore } from "@/store/binderStore";
 import { IconButton } from "@/components/ui/IconButton";
-import { nativeGoogleSignOut } from "@/lib/nativeAuth";
+import { isNativeApp, nativeGoogleSignOut } from "@/lib/nativeAuth";
+import { hapticSuccess } from "@/lib/haptics";
 
 interface Props {
   binder: BinderWithPages;
@@ -41,6 +42,24 @@ export function TopNav({ binder, isDirty, isSaving }: Props) {
       updateIsPublic(true);
     }
     const url = `${window.location.origin}/b/${binder.id}`;
+
+    // Native: open the OS share sheet. Web: fall back to copying the link.
+    if (isNativeApp()) {
+      try {
+        const { Share } = await import("@capacitor/share");
+        await Share.share({
+          title: binder.name,
+          text: `Check out my "${binder.name}" binder`,
+          url,
+          dialogTitle: "Share binder",
+        });
+        await hapticSuccess();
+      } catch {
+        // User dismissed the share sheet (or it's unavailable) — nothing to do.
+      }
+      return;
+    }
+
     await navigator.clipboard.writeText(url);
     setShareLabel("Copied!");
     setTimeout(() => setShareLabel("Share"), 2000);
