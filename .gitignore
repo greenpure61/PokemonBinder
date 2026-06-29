@@ -43,3 +43,6 @@ next-env.d.ts
 
 # local docs / scratch
 /Docs/
+
+# claude code (local agent tooling / skills)
+/.claude/
