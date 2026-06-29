@@ -28,6 +28,7 @@ import { CardZoomModal } from "@/components/cards/CardZoomModal";
 import { Button } from "@/components/ui/Button";
 import { Spinner } from "@/components/ui/Spinner";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { hapticImpact } from "@/lib/haptics";
 import type { DragItem } from "@/types/dnd";
 
 interface Props {
@@ -106,6 +107,7 @@ export function BinderEditor({ binderId }: Props) {
 
   function onDragStart(event: DragStartEvent) {
     setActiveDrag(event.active.data.current as DragItem);
+    hapticImpact(); // confirm the grab on touch
   }
 
   function onDragEnd(event: DragEndEvent) {
@@ -151,6 +153,7 @@ export function BinderEditor({ binderId }: Props) {
     if (!armedCard) return;
     updateSlot(pageId, slotIndex, armedCard);
     armCard(null);
+    hapticImpact(); // tactile confirmation the card dropped in
   }
 
   if (isLoading || !binder) {
